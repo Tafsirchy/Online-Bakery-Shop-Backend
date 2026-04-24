@@ -1,10 +1,12 @@
 const express = require('express');
 const {
   createOrder,
+  createCheckoutSession,
   getOrderById,
   getMyOrders,
   getOrders,
-  updateOrderStatus
+  updateOrderStatus,
+  markOrderPaid
 } = require('../controllers/order.controller');
 
 const { protect, authorize } = require('../middleware/auth.middleware');
@@ -15,11 +17,14 @@ router.route('/')
   .get(protect, authorize('admin', 'manager'), getOrders)
   .post(protect, createOrder);
 
+router.post('/checkout-session', protect, createCheckoutSession);
+
 router.get('/myorders', protect, getMyOrders);
 
 router.route('/:id')
   .get(protect, getOrderById);
 
 router.put('/:id/status', protect, authorize('admin', 'manager'), updateOrderStatus);
+router.put('/:id/mark-paid', protect, markOrderPaid);
 
 module.exports = router;

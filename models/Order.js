@@ -60,6 +60,14 @@ const orderSchema = new mongoose.Schema({
   trackingId: {
     type: String,
     unique: true
+  },
+  stripeSessionId: {
+    type: String,
+    default: null
+  },
+  inventoryUpdated: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true
