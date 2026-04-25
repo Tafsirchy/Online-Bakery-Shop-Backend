@@ -4,6 +4,15 @@ const connectDB = require('../config/db');
 
 const normalizeEmail = (value = '') => value.trim().toLowerCase();
 const hasJwtSecret = () => Boolean(process.env.JWT_SECRET && process.env.JWT_SECRET.trim());
+const pickRequestPayload = (req) => {
+  if (req.body && Object.keys(req.body).length > 0) {
+    return req.body;
+  }
+  if (req.query && Object.keys(req.query).length > 0) {
+    return req.query;
+  }
+  return {};
+};
 
 const sendAuthError = (res, err, fallbackMessage) => {
   const message = err?.message || fallbackMessage;
@@ -83,7 +92,7 @@ exports.login = async (req, res) => {
   try {
     await connectDB();
 
-    const { email, password } = req.body || {};
+    const { email, password } = pickRequestPayload(req);
     const normalizedEmail = normalizeEmail(email);
 
     // Validate email & password
