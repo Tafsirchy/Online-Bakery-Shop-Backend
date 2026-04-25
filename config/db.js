@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
+const dns = require('dns');
+
+// Set DNS servers to Google's to bypass local resolution issues with SRV records
+dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 let cachedConnection = null;
+
 let connectingPromise = null;
 
 const connectDB = async () => {
@@ -21,6 +26,7 @@ const connectDB = async () => {
       serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
       maxPoolSize: 10,
+      family: 4, // Force IPv4 to resolve ECONNREFUSED issues on some networks
     })
     .then((conn) => {
       cachedConnection = conn;
@@ -30,6 +36,12 @@ const connectDB = async () => {
     })
     .catch((error) => {
       connectingPromise = null;
+      if (error.message.includes('ECONNREFUSED')) {
+        console.error('❌ MongoDB Connection Error: Could not reach the database server.');
+        console.error('💡 TIP: Check if your current IP is whitelisted in MongoDB Atlas or if a VPN/Firewall is blocking the connection.');
+      } else {
+        console.error('❌ MongoDB Connection Error:', error.message);
+      }
       throw error;
     });
 
