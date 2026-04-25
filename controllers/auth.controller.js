@@ -1,6 +1,8 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const connectDB = require('../config/db');
+const axios = require('axios');
+
 
 const normalizeEmail = (value = '') => value.trim().toLowerCase();
 const hasJwtSecret = () => Boolean(process.env.JWT_SECRET && process.env.JWT_SECRET.trim());
@@ -29,10 +31,15 @@ const sendAuthError = (res, err, fallbackMessage) => {
   }
 
   // Surface DB connectivity issues clearly instead of generic 400/500 messages.
-  if (message.includes('buffering timed out') || message.includes('Server selection timed out')) {
+  if (
+    message.includes('buffering timed out') || 
+    message.includes('Server selection timed out') ||
+    message.includes('ECONNREFUSED') ||
+    message.includes('querySrv')
+  ) {
     return res.status(503).json({
       success: false,
-      message: 'Database unavailable. Please try again shortly.'
+      message: 'Database unavailable. Please check if your IP is whitelisted in MongoDB Atlas.'
     });
   }
 
@@ -92,7 +99,7 @@ exports.login = async (req, res) => {
   try {
     await connectDB();
 
-    const { email, password } = pickRequestPayload(req);
+    const { email, password } = req.body || {};
     const normalizedEmail = normalizeEmail(email);
 
     // Validate email & password
@@ -136,8 +143,138 @@ exports.getMe = async (req, res) => {
   res.status(200).json({ success: true, data: user });
 };
 
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// @desc    Google login
+// @route   POST /api/auth/google
+// @access  Public
+exports.googleLogin = async (req, res) => {
+  try {
+    await connectDB();
+    const { idToken, accessToken } = req.body;
+    let userData;
+
+    if (idToken) {
+      const ticket = await client.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      userData = ticket.getPayload();
+    } else if (accessToken) {
+      // Fetch user info from Google API using access token
+      const response = await axios.get(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`);
+      userData = response.data;
+    } else {
+      return res.status(400).json({ success: false, message: 'Google Token is missing' });
+    }
+
+    const { name, email, sub: googleId } = userData;
+
+    let user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      user = await User.create({
+        name,
+        email: email.toLowerCase(),
+        password: crypto.randomBytes(16).toString('hex'),
+        role: 'customer'
+      });
+    }
+
+    sendTokenResponse(user, 200, res);
+  } catch (err) {
+    console.error('Google Login Error:', err);
+    return res.status(401).json({ success: false, message: 'Google authentication failed' });
+  }
+};
+
+
+const crypto = require('crypto');
+
+const sendEmail = require('../utils/sendEmail');
+
+// @desc    Forgot password
+// @route   POST /api/auth/forgotpassword
+// @access  Public
+exports.forgotPassword = async (req, res) => {
+  try {
+    await connectDB();
+    const user = await User.findOne({ email: req.body.email });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'There is no user with that email' });
+    }
+
+    // Get reset token
+    const resetToken = user.getResetPasswordToken();
+
+    await user.save({ validateBeforeSave: false });
+
+    // Create reset url
+    const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
+
+    const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please make a put request to: \n\n ${resetUrl}`;
+
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: 'Password reset token',
+        message
+      });
+
+      res.status(200).json({ success: true, data: 'Email sent' });
+    } catch (err) {
+      console.log(err);
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+
+      await user.save({ validateBeforeSave: false });
+
+      return res.status(500).json({ success: false, message: 'Email could not be sent' });
+    }
+  } catch (err) {
+    return sendAuthError(res, err, 'Forgot password failed');
+  }
+};
+
+// @desc    Reset password
+// @route   PUT /api/auth/resetpassword/:resettoken
+// @access  Public
+exports.resetPassword = async (req, res) => {
+  try {
+    await connectDB();
+
+    // Get hashed token
+    const resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(req.params.resettoken)
+      .digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired token' });
+    }
+
+    // Set new password
+    user.password = req.body.password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+
+    sendTokenResponse(user, 200, res);
+  } catch (err) {
+    return sendAuthError(res, err, 'Reset password failed');
+  }
+};
+
 // Get token from model, create cookie and send response
 const sendTokenResponse = (user, statusCode, res) => {
+
   if (!hasJwtSecret()) {
     return res.status(500).json({
       success: false,
