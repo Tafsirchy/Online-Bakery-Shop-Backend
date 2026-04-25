@@ -8,7 +8,9 @@ const connectDB = require('./config/db');
 dotenv.config();
 
 // Connect to Database
-connectDB();
+connectDB().catch((error) => {
+  console.error(`MongoDB connection failed during startup: ${error.message}`);
+});
 
 const app = express();
 
@@ -37,8 +39,10 @@ app.get('/', (req, res) => {
 // Port
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+if (process.env.VERCEL !== '1') {
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+}
 
 module.exports = app;

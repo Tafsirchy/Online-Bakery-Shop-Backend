@@ -1,22 +1,78 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const connectDB = require('../config/db');
+
+const normalizeEmail = (value = '') => value.trim().toLowerCase();
+const hasJwtSecret = () => Boolean(process.env.JWT_SECRET && process.env.JWT_SECRET.trim());
+
+const sendAuthError = (res, err, fallbackMessage) => {
+  const message = err?.message || fallbackMessage;
+
+  if (err?.code === 11000 && err?.keyPattern?.email) {
+    return res.status(409).json({
+      success: false,
+      message: 'An account with this email already exists'
+    });
+  }
+
+  if (err?.name === 'ValidationError') {
+    return res.status(400).json({ success: false, message });
+  }
+
+  // Surface DB connectivity issues clearly instead of generic 400/500 messages.
+  if (message.includes('buffering timed out') || message.includes('Server selection timed out')) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database unavailable. Please try again shortly.'
+    });
+  }
+
+  return res.status(500).json({ success: false, message: message || fallbackMessage });
+};
 
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public
 exports.register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    await connectDB();
+
+    const { name, email, password } = req.body || {};
+    const normalizedName = (name || '').trim();
+    const normalizedEmail = normalizeEmail(email);
+
+    if (!normalizedName || !normalizedEmail || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide name, email, and password'
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    }
+
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser) {
+      return res.status(409).json({ success: false, message: 'User already exists with this email' });
+    }
+
+    if (!hasJwtSecret()) {
+      return res.status(500).json({
+        success: false,
+        message: 'Server configuration error: JWT secret is missing'
+      });
+    }
 
     const user = await User.create({
-      name,
-      email,
+      name: normalizedName,
+      email: normalizedEmail,
       password
     });
 
     sendTokenResponse(user, 201, res);
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    return sendAuthError(res, err, 'Registration failed');
   }
 };
 
@@ -25,31 +81,25 @@ exports.register = async (req, res) => {
 // @access  Public
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.query || req.body;
+    await connectDB();
 
-    // Mock Mode Fallback
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState !== 1) {
-      return res.status(200).json({
-        success: true,
-        token: 'mock-token-' + Date.now(),
-        user: {
-          id: 'mock-admin-id',
-          name: 'Demo Admin',
-          email: 'admin@cozybakery.com',
-          role: 'admin'
-        },
-        message: 'LOGGED IN VIA MOCK MODE'
-      });
-    }
+    const { email, password } = req.body || {};
+    const normalizedEmail = normalizeEmail(email);
 
     // Validate email & password
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       return res.status(400).json({ success: false, message: 'Please provide an email and password' });
     }
 
+    if (!hasJwtSecret()) {
+      return res.status(500).json({
+        success: false,
+        message: 'Server configuration error: JWT secret is missing'
+      });
+    }
+
     // Check for user
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email: normalizedEmail }).select('+password');
 
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
@@ -64,7 +114,7 @@ exports.login = async (req, res) => {
 
     sendTokenResponse(user, 200, res);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    return sendAuthError(res, err, 'Login failed');
   }
 };
 
@@ -72,27 +122,23 @@ exports.login = async (req, res) => {
 // @route   GET /api/auth/me
 // @access  Private
 exports.getMe = async (req, res) => {
-  const mongoose = require('mongoose');
-  if (mongoose.connection.readyState !== 1) {
-    return res.status(200).json({
-      success: true,
-      data: {
-        id: 'mock-admin-id',
-        name: 'Demo Admin',
-        email: 'admin@cozybakery.com',
-        role: 'admin'
-      }
-    });
-  }
+  await connectDB();
   const user = await User.findById(req.user.id);
   res.status(200).json({ success: true, data: user });
 };
 
 // Get token from model, create cookie and send response
 const sendTokenResponse = (user, statusCode, res) => {
+  if (!hasJwtSecret()) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server configuration error: JWT secret is missing'
+    });
+  }
+
   // Create token
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: '30d'
+    expiresIn: process.env.JWT_EXPIRE || '30d'
   });
 
   res.status(statusCode).json({

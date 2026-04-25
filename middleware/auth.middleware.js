@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const connectDB = require('../config/db');
 
 // Protect routes
 exports.protect = async (req, res, next) => {
@@ -17,21 +18,20 @@ exports.protect = async (req, res, next) => {
   }
 
   try {
-    // Mock Mode Fallback
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState !== 1 && token.startsWith('mock-token')) {
-      req.user = {
-        id: 'mock-admin-id',
-        name: 'Demo Admin',
-        email: 'admin@cozybakery.com',
-        role: 'admin'
-      };
-      return next();
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ success: false, message: 'Server configuration error: JWT secret is missing' });
     }
+
+    await connectDB();
 
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = await User.findById(decoded.id);
+
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'User no longer exists' });
+    }
+
     next();
   } catch (err) {
     return res.status(401).json({ success: false, message: 'Not authorized to access this route' });
