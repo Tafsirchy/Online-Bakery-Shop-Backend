@@ -156,11 +156,14 @@ exports.googleLogin = async (req, res) => {
     let userData;
 
     if (code) {
-      // Exchange code for tokens
+      // Ensure redirect_uri matches exactly with frontend (no trailing slashes in origin)
+      const origin = (process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/+$/, '');
+      const redirectUri = `${origin}/login`;
+
       const client = new OAuth2Client(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
-        `${process.env.CLIENT_URL}/login`
+        redirectUri
       );
       const { tokens } = await client.getToken(code);
       const response = await axios.get(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${tokens.access_token}`);
