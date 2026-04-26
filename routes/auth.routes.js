@@ -1,5 +1,5 @@
 const express = require('express');
-const { register, login, getMe, forgotPassword, resetPassword, googleLogin, updateDetails, updatePassword } = require('../controllers/auth.controller');
+const { register, login, getMe, forgotPassword, resetPassword, googleLogin, updateDetails, updatePassword, getWishlist, toggleWishlist } = require('../controllers/auth.controller');
 
 
 const { protect } = require('../middleware/auth.middleware');
@@ -14,6 +14,8 @@ router.put('/resetpassword/:resettoken', resetPassword);
 router.post('/google', googleLogin);
 router.put('/updatedetails', protect, updateDetails);
 router.put('/updatepassword', protect, updatePassword);
+router.get('/wishlist', protect, getWishlist);
+router.post('/wishlist/:productId', protect, toggleWishlist);
 
 
 

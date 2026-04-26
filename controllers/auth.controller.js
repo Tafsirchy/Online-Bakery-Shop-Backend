@@ -345,3 +345,46 @@ exports.updatePassword = async (req, res) => {
     res.status(400).json({ success: false, message: err.message });
   }
 };
+
+// @desc    Get user wishlist
+// @route   GET /api/auth/wishlist
+// @access  Private
+exports.getWishlist = async (req, res) => {
+  try {
+    await connectDB();
+    const user = await User.findById(req.user.id).populate('wishlist');
+    res.status(200).json({ success: true, data: user.wishlist });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+// @desc    Toggle item in wishlist
+// @route   POST /api/auth/wishlist/:productId
+// @access  Private
+exports.toggleWishlist = async (req, res) => {
+  try {
+    await connectDB();
+    const user = await User.findById(req.user.id);
+    const productId = req.params.productId;
+
+    const isLiked = user.wishlist.includes(productId);
+
+    if (isLiked) {
+      // Remove from wishlist
+      user.wishlist = user.wishlist.filter(id => id.toString() !== productId);
+    } else {
+      // Add to wishlist
+      user.wishlist.push(productId);
+    }
+
+    await user.save();
+    
+    // Return populated wishlist
+    await user.populate('wishlist');
+
+    res.status(200).json({ success: true, data: user.wishlist });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
