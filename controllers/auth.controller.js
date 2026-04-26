@@ -370,11 +370,9 @@ exports.toggleWishlist = async (req, res) => {
     const isLiked = user.wishlist.some(id => id.toString() === productId);
 
     if (isLiked) {
-      // Remove from wishlist
-      user.wishlist = user.wishlist.filter(id => id.toString() !== productId);
+      user.wishlist.pull(productId);
     } else {
-      // Add to wishlist
-      user.wishlist.push(productId);
+      user.wishlist.addToSet(productId);
     }
 
     await user.save();
