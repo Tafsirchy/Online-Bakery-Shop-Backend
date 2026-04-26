@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const connectDB = require('../config/db');
 
 const roundPrice = (value) => Number(Number(value).toFixed(2));
 
@@ -7,80 +8,7 @@ const roundPrice = (value) => Number(Number(value).toFixed(2));
 // @access  Public
 exports.getProducts = async (req, res) => {
   try {
-    // Mock Data Fallback if DB not connected
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState !== 1) {
-      const mockProducts = [
-        {
-          _id: 'mock1',
-          name: 'Classic Sourdough',
-          price: 8.50,
-          category: 'Bread',
-          description: 'Slow-fermented for 24 hours using organic flour.',
-          stock: 20,
-          images: ['https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800'],
-          averageRating: 4.8
-        },
-        {
-          _id: 'mock2',
-          name: 'Velvet Chocolate Cake',
-          price: 35.00,
-          category: 'Cakes',
-          description: 'Triple-layer dark chocolate cake with silky ganache.',
-          stock: 5,
-          images: ['https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800'],
-          averageRating: 4.9,
-          discountPrice: 28.00
-        },
-        {
-          _id: 'mock3',
-          name: 'Almond Croissant',
-          price: 4.75,
-          category: 'Pastries',
-          description: 'Flaky layers filled with homemade almond cream.',
-          stock: 15,
-          images: ['https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=800'],
-          averageRating: 4.7
-        },
-        {
-          _id: 'mock4',
-          name: 'Blueberry Muffin',
-          price: 3.50,
-          category: 'Pastries',
-          description: 'Bursting with fresh blueberries and topped with sugar streusel.',
-          stock: 25,
-          images: ['https://images.unsplash.com/photo-1607958996333-41aef7caefaa?w=800'],
-          averageRating: 4.6
-        },
-        {
-          _id: 'mock5',
-          name: 'Artisanal Baguette',
-          price: 5.00,
-          category: 'Bread',
-          description: 'Traditional French style with a crispy crust and soft airy center.',
-          stock: 30,
-          images: ['https://images.unsplash.com/photo-1597079910443-60c43fc4f729?w=800'],
-          averageRating: 4.5
-        },
-        {
-          _id: 'mock6',
-          name: 'Strawberry Tart',
-          price: 6.50,
-          category: 'Cakes',
-          description: 'Buttery shortcrust pastry filled with crème pâtissière and glazed strawberries.',
-          stock: 10,
-          images: ['https://images.unsplash.com/photo-1464305795204-6f5bdee7351a?w=800'],
-          averageRating: 4.8
-        }
-      ];
-      return res.status(200).json({
-        success: true,
-        count: mockProducts.length,
-        pagination: {},
-        data: mockProducts,
-        message: 'Running in MOCK MODE (No Database Connected)'
-      });
-    }
+    await connectDB();
 
     let query;
 
@@ -196,6 +124,7 @@ exports.getProducts = async (req, res) => {
 // @access  Public
 exports.getProduct = async (req, res) => {
   try {
+    await connectDB();
     const product = await Product.findById(req.params.id).populate('reviews');
 
     if (!product) {
@@ -213,6 +142,7 @@ exports.getProduct = async (req, res) => {
 // @access  Private (Admin/Manager)
 exports.createProduct = async (req, res) => {
   try {
+    await connectDB();
     const product = await Product.create(req.body);
     res.status(201).json({ success: true, data: product });
   } catch (err) {
@@ -225,6 +155,7 @@ exports.createProduct = async (req, res) => {
 // @access  Private (Admin/Manager)
 exports.updateProduct = async (req, res) => {
   try {
+    await connectDB();
     let product = await Product.findById(req.params.id);
 
     if (!product) {
@@ -247,6 +178,7 @@ exports.updateProduct = async (req, res) => {
 // @access  Private (Admin)
 exports.deleteProduct = async (req, res) => {
   try {
+    await connectDB();
     const product = await Product.findById(req.params.id);
 
     if (!product) {
@@ -266,6 +198,7 @@ exports.deleteProduct = async (req, res) => {
 // @access  Private (Admin/Manager)
 exports.applyGlobalOffer = async (req, res) => {
   try {
+    await connectDB();
     const { discountPercent, clear, category } = req.body;
     const filter = {};
 
@@ -322,6 +255,7 @@ exports.applyGlobalOffer = async (req, res) => {
 // @access  Private (Admin/Manager)
 exports.applyProductOffer = async (req, res) => {
   try {
+    await connectDB();
     const { discountPercent, clear } = req.body;
     const product = await Product.findById(req.params.id);
 

@@ -3,6 +3,7 @@ const Product = require('../models/Product');
 const Coupon = require('../models/Coupon');
 const sendEmail = require('../services/mail.service');
 const mongoose = require('mongoose');
+const connectDB = require('../config/db');
 
 const sendOrderConfirmation = async (user, order) => {
   try {
@@ -160,6 +161,7 @@ const updateStockForOrder = async (products = []) => {
 };
 
 exports.handleStripeWebhook = async (req, res) => {
+  await connectDB();
   const stripe = getStripeClient();
   if (!stripe) {
     return res.status(500).send('Stripe is not configured on server');
@@ -230,6 +232,7 @@ exports.handleStripeWebhook = async (req, res) => {
 // @access  Private
 exports.createOrder = async (req, res) => {
   try {
+    await connectDB();
     const {
       products,
       shippingAddress,
@@ -286,6 +289,7 @@ exports.createOrder = async (req, res) => {
 // @access  Private
 exports.createCheckoutSession = async (req, res) => {
   try {
+    await connectDB();
     const stripe = getStripeClient();
     if (!stripe) {
       return res.status(500).json({ success: false, message: 'Stripe is not configured on server' });
@@ -373,6 +377,7 @@ exports.createCheckoutSession = async (req, res) => {
 // @access  Private
 exports.getOrderById = async (req, res) => {
   try {
+    await connectDB();
     const order = await Order.findById(req.params.id).populate('userId', 'name email');
 
     if (!order) {
@@ -395,20 +400,7 @@ exports.getOrderById = async (req, res) => {
 // @access  Private
 exports.getMyOrders = async (req, res) => {
   try {
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState !== 1) {
-      const mockOrders = [
-        {
-          _id: 'o1',
-          trackingId: 'BAK-12345',
-          finalPrice: 45.50,
-          status: 'Processing',
-          createdAt: new Date(),
-          products: [{ name: 'Chocolate Cake', quantity: 1, price: 35 }]
-        }
-      ];
-      return res.status(200).json({ success: true, data: mockOrders });
-    }
+    await connectDB();
     const orders = await Order.find({ userId: req.user.id }).sort('-createdAt');
     res.status(200).json({ success: true, data: orders });
   } catch (err) {
@@ -421,6 +413,7 @@ exports.getMyOrders = async (req, res) => {
 // @access  Private (Admin/Manager)
 exports.getOrders = async (req, res) => {
   try {
+    await connectDB();
     const orders = await Order.find().populate('userId', 'id name').sort('-createdAt');
     res.status(200).json({ success: true, data: orders });
   } catch (err) {
@@ -433,6 +426,7 @@ exports.getOrders = async (req, res) => {
 // @access  Private (Admin/Manager)
 exports.updateOrderStatus = async (req, res) => {
   try {
+    await connectDB();
     const order = await Order.findById(req.params.id);
 
     if (!order) {
@@ -455,6 +449,7 @@ exports.updateOrderStatus = async (req, res) => {
 // @access  Private
 exports.markOrderPaid = async (req, res) => {
   try {
+    await connectDB();
     const order = await Order.findById(req.params.id);
 
     if (!order) {
