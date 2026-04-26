@@ -367,8 +367,7 @@ exports.toggleWishlist = async (req, res) => {
     await connectDB();
     const user = await User.findById(req.user.id);
     const productId = req.params.productId;
-
-    const isLiked = user.wishlist.includes(productId);
+    const isLiked = user.wishlist.some(id => id.toString() === productId);
 
     if (isLiked) {
       // Remove from wishlist
