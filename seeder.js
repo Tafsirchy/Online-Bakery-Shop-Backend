@@ -20,6 +20,8 @@ const products = [
     images: ['https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=800'],
     averageRating: 4.8,
     discountPrice: 6.99,
+    ingredients: ['Organic Stone-ground Flour', 'Natural Wild Yeast', 'Filtered Water', 'Sea Salt'],
+    healthBenefits: ['Rich in Probiotics', 'Easier to Digest', 'Low Glycemic Index', 'No Preservatives']
   },
   {
     name: 'Velvet Chocolate Cake',
@@ -30,6 +32,8 @@ const products = [
     images: ['https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&q=80&w=800'],
     averageRating: 4.9,
     discountPrice: 29.5,
+    ingredients: ['70% Dark Cocoa', 'Organic Cane Sugar', 'Grass-fed Butter', 'Free-range Eggs', 'Madagascar Vanilla'],
+    healthBenefits: ['High in Antioxidants', 'Mood Enhancer', 'Iron & Magnesium Source']
   },
   {
     name: 'Almond Croissant',
@@ -40,6 +44,8 @@ const products = [
     images: ['https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&q=80&w=800'],
     averageRating: 4.7,
     discountPrice: 0,
+    ingredients: ['French Cultured Butter', 'California Almonds', 'Organic Wheat Flour', 'Honey'],
+    healthBenefits: ['High Protein Almonds', 'Healthy Fats', 'Energy Booster']
   },
   {
     name: 'Blueberry Muffin',

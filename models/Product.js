@@ -43,6 +43,14 @@ const productSchema = new mongoose.Schema({
   numOfReviews: {
     type: Number,
     default: 0
+  },
+  ingredients: {
+    type: [String],
+    default: []
+  },
+  healthBenefits: {
+    type: [String],
+    default: []
   }
 }, {
   timestamps: true,
