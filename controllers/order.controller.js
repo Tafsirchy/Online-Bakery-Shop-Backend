@@ -522,3 +522,44 @@ exports.markOrderPaid = async (req, res) => {
     res.status(400).json({ success: false, message: err.message });
   }
 };
+
+// @desc    Cancel an order (by customer)
+// @route   PUT /api/orders/:id/cancel
+// @access  Private
+exports.cancelMyOrder = async (req, res) => {
+  try {
+    await connectDB();
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    if (order.userId.toString() !== req.user.id) {
+      return res.status(401).json({ success: false, message: 'Not authorized to cancel this order' });
+    }
+
+    if (order.status !== 'Pending' && order.status !== 'Processing') {
+      return res.status(400).json({ success: false, message: 'Order cannot be cancelled at this stage' });
+    }
+
+    // Restore inventory if it was updated
+    if (order.inventoryUpdated) {
+      for (const item of order.products) {
+        const product = await Product.findById(item.productId);
+        if (product) {
+          product.stock += item.quantity;
+          await product.save();
+        }
+      }
+      order.inventoryUpdated = false;
+    }
+
+    order.status = 'Cancelled';
+    await order.save();
+
+    res.status(200).json({ success: true, data: order });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};

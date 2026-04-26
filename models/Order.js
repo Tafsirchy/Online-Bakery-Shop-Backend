@@ -63,7 +63,8 @@ const orderSchema = new mongoose.Schema({
     street: String,
     city: String,
     zipCode: String,
-    country: String
+    country: String,
+    phone: String
   },
   trackingId: {
     type: String,
