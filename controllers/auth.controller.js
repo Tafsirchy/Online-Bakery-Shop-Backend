@@ -152,10 +152,21 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 exports.googleLogin = async (req, res) => {
   try {
     await connectDB();
-    const { idToken, accessToken } = req.body;
+    const { idToken, accessToken, code } = req.body;
     let userData;
 
-    if (idToken) {
+    if (code) {
+      // Exchange code for tokens
+      const client = new OAuth2Client(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        `${process.env.CLIENT_URL}/login`
+      );
+      const { tokens } = await client.getToken(code);
+      const response = await axios.get(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${tokens.access_token}`);
+      userData = response.data;
+    } else if (idToken) {
+      const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
       const ticket = await client.verifyIdToken({
         idToken,
         audience: process.env.GOOGLE_CLIENT_ID,
