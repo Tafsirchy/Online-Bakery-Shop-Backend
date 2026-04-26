@@ -307,7 +307,9 @@ exports.updateDetails = async (req, res) => {
     await connectDB();
     const fieldsToUpdate = {
       name: req.body.name,
-      email: req.body.email
+      email: req.body.email,
+      phone: req.body.phone,
+      address: req.body.address
     };
 
     const user = await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, {

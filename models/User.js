@@ -26,11 +26,13 @@ const userSchema = new mongoose.Schema({
     enum: ['customer', 'admin', 'manager'],
     default: 'customer'
   },
+  phone: {
+    type: String,
+    default: ''
+  },
   address: {
-    street: String,
-    city: String,
-    zipCode: String,
-    country: String
+    type: String,
+    default: ''
   },
   createdAt: {
     type: Date,
