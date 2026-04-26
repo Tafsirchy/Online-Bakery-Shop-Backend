@@ -367,20 +367,29 @@ exports.toggleWishlist = async (req, res) => {
     await connectDB();
     const user = await User.findById(req.user.id);
     const productId = req.params.productId;
-    const isLiked = user.wishlist.some(id => id.toString() === productId);
-
-    if (isLiked) {
-      user.wishlist.pull(productId);
-    } else {
-      user.wishlist.addToSet(productId);
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    await user.save();
-    
-    // Return populated wishlist
-    await user.populate('wishlist');
+    const isLiked = user.wishlist.some(id => id.toString() === productId);
 
-    res.status(200).json({ success: true, data: user.wishlist });
+    let updatedUser;
+    if (isLiked) {
+      updatedUser = await User.findByIdAndUpdate(
+        req.user.id,
+        { $pull: { wishlist: productId } },
+        { new: true }
+      ).populate('wishlist');
+    } else {
+      updatedUser = await User.findByIdAndUpdate(
+        req.user.id,
+        { $addToSet: { wishlist: productId } },
+        { new: true }
+      ).populate('wishlist');
+    }
+
+    res.status(200).json({ success: true, data: updatedUser.wishlist });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }
