@@ -22,8 +22,14 @@ const orderRoutes = require('./routes/order.routes');
 
 // Middleware
 app.use(cors());
-app.use(express.json());
 app.use(morgan('dev'));
+
+const { handleStripeWebhook } = require('./controllers/order.controller');
+
+// Stripe webhook must receive the raw body for signature verification.
+app.post('/api/orders/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
+
+app.use(express.json());
 
 // Mount Routes
 app.use('/api/auth', authRoutes);

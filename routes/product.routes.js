@@ -4,7 +4,9 @@ const {
   getProduct,
   createProduct,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  applyGlobalOffer,
+  applyProductOffer
 } = require('../controllers/product.controller');
 
 const { protect, authorize } = require('../middleware/auth.middleware');
@@ -20,6 +22,9 @@ router.use('/:productId/reviews', reviewRouter);
 router.route('/')
   .get(getProducts)
   .post(protect, authorize('admin', 'manager'), createProduct);
+
+router.patch('/offers/global', protect, authorize('admin', 'manager'), applyGlobalOffer);
+router.patch('/:id/offer', protect, authorize('admin', 'manager'), applyProductOffer);
 
 router.route('/:id')
   .get(getProduct)

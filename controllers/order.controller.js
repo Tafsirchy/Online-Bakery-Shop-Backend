@@ -1,6 +1,27 @@
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+const Coupon = require('../models/Coupon');
 const sendEmail = require('../services/mail.service');
+const mongoose = require('mongoose');
+
+const sendOrderConfirmation = async (user, order) => {
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: 'Order Confirmation - The Cozy Bakery',
+      html: `
+        <h1>Thank you for your order, ${user.name}!</h1>
+        <p>Your order <strong>${order.trackingId}</strong> has been received and is being prepared.</p>
+        <p>Total Amount: <strong>৳${Number(order.finalPrice).toFixed(2)}</strong></p>
+        <p>Payment Method: ${order.paymentMethod}</p>
+        <hr />
+        <p>We'll notify you once your treats are on the way!</p>
+      `
+    });
+  } catch (err) {
+    console.error('Email could not be sent', err);
+  }
+};
 
 const getStripeClient = () => {
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -13,18 +34,121 @@ const getStripeClient = () => {
 
 const buildOrderTrackingId = () => `BAK-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-const buildStripeLineItems = (products = []) => {
-  return products.map((item) => ({
+const toSafeNumber = (value, defaultValue = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : defaultValue;
+};
+
+const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(String(value || ''));
+
+const normalizeOrderProducts = async (rawProducts = []) => {
+  if (!Array.isArray(rawProducts) || rawProducts.length === 0) {
+    throw new Error('No order items');
+  }
+
+  const quantitiesByProductId = new Map();
+  const invalidProductIds = [];
+
+  for (const rawItem of rawProducts) {
+    const productId = String(rawItem?.productId || '').trim();
+    const quantity = Math.floor(toSafeNumber(rawItem?.quantity, 0));
+
+    if (!isValidObjectId(productId)) {
+      invalidProductIds.push(productId || 'unknown');
+      continue;
+    }
+
+    if (quantity < 1) {
+      throw new Error(`Invalid quantity for product ${productId}`);
+    }
+
+    const currentQty = quantitiesByProductId.get(productId) || 0;
+    quantitiesByProductId.set(productId, currentQty + quantity);
+  }
+
+  if (invalidProductIds.length > 0) {
+    throw new Error(`Invalid product IDs: ${invalidProductIds.join(', ')}`);
+  }
+
+  const productIds = [...quantitiesByProductId.keys()];
+  const dbProducts = await Product.find({ _id: { $in: productIds } }).select('name price discountPrice images stock');
+  const dbProductMap = new Map(dbProducts.map((product) => [String(product._id), product]));
+
+  const missingProducts = productIds.filter((productId) => !dbProductMap.has(productId));
+
+  const orderProducts = [];
+  let subtotal = 0;
+  const outOfStockProducts = [];
+
+  for (const productId of productIds) {
+    const product = dbProductMap.get(productId);
+    const quantity = quantitiesByProductId.get(productId);
+
+    if (!product) {
+      continue;
+    }
+
+    const currentStock = toSafeNumber(product.stock, 0);
+    if (currentStock < quantity) {
+      outOfStockProducts.push(product.name);
+      continue;
+    }
+
+    const unitPrice = toSafeNumber(product.discountPrice, 0) > 0
+      ? toSafeNumber(product.discountPrice, 0)
+      : toSafeNumber(product.price, 0);
+
+    if (unitPrice <= 0) {
+      throw new Error(`Invalid price for ${product.name}`);
+    }
+
+    subtotal += unitPrice * quantity;
+
+    orderProducts.push({
+      productId: product._id,
+      name: product.name,
+      quantity,
+      price: unitPrice,
+      image: product.images?.[0] || '',
+    });
+  }
+
+  if (orderProducts.length === 0) {
+    const unavailable = [...missingProducts, ...outOfStockProducts].filter(Boolean);
+    throw new Error(
+      unavailable.length > 0
+        ? `Some products are unavailable: ${unavailable.join(', ')}`
+        : 'No valid products available for checkout'
+    );
+  }
+
+  const unavailable = [...missingProducts, ...outOfStockProducts].filter(Boolean);
+
+  return {
+    orderProducts,
+    subtotal: Number(subtotal.toFixed(2)),
+    missingProducts: unavailable,
+  };
+};
+
+const buildStripeLineItems = ({ orderProducts = [], chargeAmount = 0, shippingFee = 0, discountAmount = 0 }) => {
+  const description = [
+    `${orderProducts.length} item(s)`,
+    `Shipping: ${shippingFee.toFixed(2)}`,
+    `Discount: ${discountAmount.toFixed(2)}`,
+  ].join(' | ');
+
+  return [{
     price_data: {
-      currency: 'usd',
+      currency: 'bdt',
       product_data: {
-        name: item.name || 'Bakery Item',
-        images: item.image ? [item.image] : item.images || [],
+        name: 'The Cozy Bakery Order',
+        description,
       },
-      unit_amount: Math.round(Number(item.price || 0) * 100),
+      unit_amount: Math.round(Number(chargeAmount || 0) * 100),
     },
-    quantity: Number(item.quantity || 1),
-  }));
+    quantity: 1,
+  }];
 };
 
 const updateStockForOrder = async (products = []) => {
@@ -33,6 +157,72 @@ const updateStockForOrder = async (products = []) => {
       $inc: { stock: -item.quantity }
     });
   }
+};
+
+exports.handleStripeWebhook = async (req, res) => {
+  const stripe = getStripeClient();
+  if (!stripe) {
+    return res.status(500).send('Stripe is not configured on server');
+  }
+
+  const signature = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!webhookSecret) {
+    return res.status(500).send('Stripe webhook secret is not configured');
+  }
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, signature, webhookSecret);
+  } catch (err) {
+    console.error(`Stripe webhook signature verification failed: ${err.message}`);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const orderId = session.metadata?.orderId;
+
+    if (!orderId) {
+      return res.status(200).json({ received: true, skipped: true });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(200).json({ received: true, skipped: true });
+    }
+
+    if (order.paymentStatus !== 'Paid') {
+      const expectedAmount = Math.round(toSafeNumber(order.finalPrice, 0) * 100);
+      if (session.amount_total !== expectedAmount) {
+        console.error(`Stripe amount mismatch for order ${orderId}`);
+        return res.status(400).json({ received: true, error: 'Amount mismatch' });
+      }
+
+      const updatedOrder = await Order.findOneAndUpdate(
+        { _id: orderId, paymentStatus: { $ne: 'Paid' } },
+        { $set: { paymentStatus: 'Paid', status: 'Processing' } },
+        { new: true }
+      ).populate('userId', 'name email');
+
+      if (updatedOrder) {
+        const inventoryCheck = await Order.findOneAndUpdate(
+          { _id: orderId, inventoryUpdated: false },
+          { $set: { inventoryUpdated: true } }
+        );
+
+        if (inventoryCheck) {
+          await updateStockForOrder(updatedOrder.products);
+        }
+
+        await sendOrderConfirmation(updatedOrder.userId, updatedOrder);
+      }
+    }
+  }
+
+  return res.status(200).json({ received: true });
 };
 
 // @desc    Create new order
@@ -44,52 +234,48 @@ exports.createOrder = async (req, res) => {
       products,
       shippingAddress,
       paymentMethod,
-      totalPrice,
-      discount,
-      finalPrice
+      couponCode
     } = req.body;
 
-    if (products && products.length === 0) {
-      return res.status(400).json({ success: false, message: 'No order items' });
+    const { orderProducts, subtotal, missingProducts } = await normalizeOrderProducts(products);
+    const safeShippingFee = 60; // Flat fee
+    let safeDiscount = 0;
+
+    if (couponCode) {
+      const coupon = await Coupon.findOne({ code: String(couponCode).toUpperCase(), isActive: true });
+      if (coupon && subtotal >= (coupon.minPurchase || 0)) {
+        safeDiscount = (subtotal * coupon.discount) / 100;
+      }
     }
+
+    const computedFinalPrice = Number((subtotal + safeShippingFee - safeDiscount).toFixed(2));
 
     const order = new Order({
       userId: req.user.id,
-      products,
+      products: orderProducts,
       shippingAddress,
       paymentMethod,
-      totalPrice,
-      discount,
-      finalPrice,
+      totalPrice: subtotal,
+      shippingFee: safeShippingFee,
+      discount: safeDiscount,
+      finalPrice: computedFinalPrice,
       trackingId: buildOrderTrackingId()
     });
 
     const createdOrder = await order.save();
 
-    // Send confirmation email
-    try {
-      await sendEmail({
-        email: req.user.email,
-        subject: 'Order Confirmation - The Cozy Bakery',
-        html: `
-          <h1>Thank you for your order, ${req.user.name}!</h1>
-          <p>Your order <strong>${createdOrder.trackingId}</strong> has been received and is being prepared.</p>
-          <p>Total Amount: <strong>$${Number(finalPrice).toFixed(2)}</strong></p>
-          <p>Payment Method: ${paymentMethod}</p>
-          <hr />
-          <p>We'll notify you once your treats are on the way!</p>
-        `
-      });
-    } catch (err) {
-      console.error('Email could not be sent');
-    }
+    await sendOrderConfirmation(req.user, createdOrder);
 
     // Update product stock
-    await updateStockForOrder(products);
+    await updateStockForOrder(orderProducts);
     createdOrder.inventoryUpdated = true;
     await createdOrder.save();
 
-    res.status(201).json({ success: true, data: createdOrder });
+    res.status(201).json({
+      success: true,
+      data: createdOrder,
+      warnings: missingProducts,
+    });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }
@@ -109,13 +295,24 @@ exports.createCheckoutSession = async (req, res) => {
       products,
       shippingAddress,
       paymentMethod,
-      totalPrice,
-      discount,
-      finalPrice
+      couponCode
     } = req.body;
 
-    if (!products || products.length === 0) {
-      return res.status(400).json({ success: false, message: 'No order items' });
+    const { orderProducts, subtotal, missingProducts } = await normalizeOrderProducts(products);
+    const safeShippingFee = 60; // Flat fee
+    let safeDiscount = 0;
+
+    if (couponCode) {
+      const coupon = await Coupon.findOne({ code: String(couponCode).toUpperCase(), isActive: true });
+      if (coupon && subtotal >= (coupon.minPurchase || 0)) {
+        safeDiscount = (subtotal * coupon.discount) / 100;
+      }
+    }
+
+    const computedFinalPrice = Number((subtotal + safeShippingFee - safeDiscount).toFixed(2));
+
+    if (computedFinalPrice <= 0) {
+      return res.status(400).json({ success: false, message: 'Invalid final payment amount' });
     }
 
     if (paymentMethod !== 'Stripe') {
@@ -124,12 +321,13 @@ exports.createCheckoutSession = async (req, res) => {
 
     const order = await Order.create({
       userId: req.user.id,
-      products,
+      products: orderProducts,
       shippingAddress,
       paymentMethod,
-      totalPrice,
-      discount,
-      finalPrice,
+      totalPrice: subtotal,
+      shippingFee: safeShippingFee,
+      discount: safeDiscount,
+      finalPrice: computedFinalPrice,
       trackingId: buildOrderTrackingId(),
       paymentStatus: 'Pending',
       inventoryUpdated: false,
@@ -141,7 +339,12 @@ exports.createCheckoutSession = async (req, res) => {
       mode: 'payment',
       payment_method_types: ['card'],
       customer_email: req.user.email,
-      line_items: buildStripeLineItems(products),
+      line_items: buildStripeLineItems({
+        orderProducts,
+        chargeAmount: computedFinalPrice,
+        shippingFee: safeShippingFee,
+        discountAmount: safeDiscount,
+      }),
       metadata: {
         orderId: String(order._id),
         userId: String(req.user.id),
@@ -156,7 +359,9 @@ exports.createCheckoutSession = async (req, res) => {
     res.status(200).json({
       success: true,
       sessionId: session.id,
+      sessionUrl: session.url,
       orderId: order._id,
+      warnings: missingProducts,
     });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
@@ -267,19 +472,57 @@ exports.markOrderPaid = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Order is not a Stripe order' });
     }
 
-    if (!order.inventoryUpdated) {
-      await updateStockForOrder(order.products);
-      order.inventoryUpdated = true;
+    if (order.paymentStatus === 'Paid') {
+      return res.status(200).json({ success: true, data: order });
     }
 
-    order.paymentStatus = 'Paid';
-    if (order.status === 'Pending') {
-      order.status = 'Processing';
+    const providedSessionId = String(req.body?.sessionId || req.query?.session_id || req.query?.sessionId || '').trim();
+
+    if (!providedSessionId) {
+      return res.status(400).json({ success: false, message: 'Stripe session ID is required' });
     }
 
-    await order.save();
+    if (!order.stripeSessionId || providedSessionId !== order.stripeSessionId) {
+      return res.status(400).json({ success: false, message: 'Invalid Stripe session for this order' });
+    }
 
-    res.status(200).json({ success: true, data: order });
+    const stripe = getStripeClient();
+    if (!stripe) {
+      return res.status(500).json({ success: false, message: 'Stripe is not configured on server' });
+    }
+
+    const session = await stripe.checkout.sessions.retrieve(order.stripeSessionId);
+    if (session.payment_status !== 'paid') {
+      return res.status(400).json({ success: false, message: 'Stripe payment is not completed yet' });
+    }
+
+    const expectedAmount = Math.round(toSafeNumber(order.finalPrice, 0) * 100);
+    if (session.amount_total !== expectedAmount) {
+      return res.status(400).json({ success: false, message: 'Stripe payment amount mismatch' });
+    }
+
+    const updatedOrder = await Order.findOneAndUpdate(
+      { _id: order._id, paymentStatus: { $ne: 'Paid' } },
+      { $set: { paymentStatus: 'Paid', status: 'Processing' } },
+      { new: true }
+    ).populate('userId', 'name email');
+
+    if (updatedOrder) {
+      const inventoryCheck = await Order.findOneAndUpdate(
+        { _id: order._id, inventoryUpdated: false },
+        { $set: { inventoryUpdated: true } }
+      );
+
+      if (inventoryCheck) {
+        await updateStockForOrder(updatedOrder.products);
+      }
+      
+      await sendOrderConfirmation(updatedOrder.userId, updatedOrder);
+      return res.status(200).json({ success: true, data: updatedOrder });
+    } else {
+      const alreadyPaidOrder = await Order.findById(order._id);
+      return res.status(200).json({ success: true, data: alreadyPaidOrder });
+    }
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }

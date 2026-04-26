@@ -21,12 +21,20 @@ const orderSchema = new mongoose.Schema({
       price: {
         type: Number,
         required: true
+      },
+      image: {
+        type: String,
+        default: ''
       }
     }
   ],
   totalPrice: {
     type: Number,
     required: true
+  },
+  shippingFee: {
+    type: Number,
+    default: 0
   },
   discount: {
     type: Number,

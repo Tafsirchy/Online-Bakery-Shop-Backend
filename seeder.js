@@ -1,6 +1,6 @@
-const fs = require('fs');
-const mongoose = require('mongoose');
 const dotenv = require('dotenv');
+const mongoose = require('mongoose');
+const connectDB = require('./config/db');
 
 // Load env vars
 dotenv.config();
@@ -8,9 +8,6 @@ dotenv.config();
 // Load models
 const Product = require('./models/Product');
 const User = require('./models/User');
-
-// Connect to DB
-mongoose.connect(process.env.MONGO_URI);
 
 // Mock Data
 const products = [
@@ -20,7 +17,9 @@ const products = [
     category: 'Bread',
     description: 'Slow-fermented for 24 hours using organic stone-ground flour.',
     stock: 20,
-    images: ['https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=800']
+    images: ['https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=800'],
+    averageRating: 4.8,
+    discountPrice: 6.99,
   },
   {
     name: 'Velvet Chocolate Cake',
@@ -28,7 +27,9 @@ const products = [
     category: 'Cakes',
     description: 'Triple-layer dark chocolate cake with silky ganache frosting.',
     stock: 5,
-    images: ['https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&q=80&w=800']
+    images: ['https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&q=80&w=800'],
+    averageRating: 4.9,
+    discountPrice: 29.5,
   },
   {
     name: 'Almond Croissant',
@@ -36,7 +37,9 @@ const products = [
     category: 'Pastries',
     description: 'Flaky layers filled with homemade almond frangipane.',
     stock: 15,
-    images: ['https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&q=80&w=800']
+    images: ['https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&q=80&w=800'],
+    averageRating: 4.7,
+    discountPrice: 0,
   },
   {
     name: 'Blueberry Muffin',
@@ -44,7 +47,9 @@ const products = [
     category: 'Pastries',
     description: 'Bursting with fresh blueberries and topped with sugar streusel.',
     stock: 25,
-    images: ['https://images.unsplash.com/photo-1607958996333-41aef7caefaa?auto=format&fit=crop&q=80&w=800']
+    images: ['https://images.unsplash.com/photo-1607958996333-41aef7caefaa?auto=format&fit=crop&q=80&w=800'],
+    averageRating: 4.6,
+    discountPrice: 0,
   },
   {
     name: 'Artisanal Baguette',
@@ -52,7 +57,9 @@ const products = [
     category: 'Bread',
     description: 'Traditional French style with a crispy crust and soft airy center.',
     stock: 30,
-    images: ['https://images.unsplash.com/photo-1597079910443-60c43fc4f729?auto=format&fit=crop&q=80&w=800']
+    images: ['https://images.unsplash.com/photo-1597079910443-60c43fc4f729?auto=format&fit=crop&q=80&w=800'],
+    averageRating: 4.5,
+    discountPrice: 4.25,
   },
   {
     name: 'Strawberry Tart',
@@ -60,30 +67,127 @@ const products = [
     category: 'Cakes',
     description: 'Buttery shortcrust pastry filled with crème pâtissière and glazed strawberries.',
     stock: 10,
-    images: ['https://images.unsplash.com/photo-1464305795204-6f5bdee7351a?auto=format&fit=crop&q=80&w=800']
-  }
+    images: ['https://images.unsplash.com/photo-1464305795204-6f5bdee7351a?auto=format&fit=crop&q=80&w=800'],
+    averageRating: 4.8,
+    discountPrice: 5.5,
+  },
+  {
+    name: 'Butter Cookie Box',
+    price: 12.99,
+    category: 'Cookies',
+    description: 'Crisp, buttery cookies in a gift-ready bakery box.',
+    stock: 35,
+    images: ['https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&q=80&w=800'],
+    averageRating: 4.4,
+    discountPrice: 10.99,
+  },
+  {
+    name: 'Cinnamon Roll',
+    price: 5.75,
+    category: 'Pastries',
+    description: 'Soft brioche swirl with cinnamon sugar and cream-cheese glaze.',
+    stock: 18,
+    images: ['https://images.unsplash.com/photo-1509365465985-25d11c17e812?auto=format&fit=crop&q=80&w=800'],
+    averageRating: 4.9,
+    discountPrice: 0,
+  },
+  {
+    name: 'Honey Oat Loaf',
+    price: 7.95,
+    category: 'Bread',
+    description: 'Wholegrain loaf sweetened lightly with wildflower honey.',
+    stock: 16,
+    images: ['https://images.unsplash.com/photo-1608198093002-ad4e005484ec?auto=format&fit=crop&q=80&w=800'],
+    averageRating: 4.3,
+    discountPrice: 6.95,
+  },
+  {
+    name: 'Caramel Cheesecake Slice',
+    price: 9.5,
+    category: 'Cakes',
+    description: 'Rich baked cheesecake topped with salted caramel drizzle.',
+    stock: 12,
+    images: ['https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&q=80&w=800'],
+    averageRating: 4.8,
+    discountPrice: 8.25,
+  },
+  {
+    name: 'Hazelnut Biscotti',
+    price: 8.25,
+    category: 'Cookies',
+    description: 'Twice-baked Italian biscotti with roasted hazelnuts.',
+    stock: 40,
+    images: ['https://images.unsplash.com/photo-1548365328-9f547fb0953e?auto=format&fit=crop&q=80&w=800'],
+    averageRating: 4.2,
+    discountPrice: 0,
+  },
+  {
+    name: 'Weekend Special Focaccia',
+    price: 11.5,
+    category: 'Offers',
+    description: 'Rosemary-garlic focaccia baked fresh for limited weekend batches.',
+    stock: 14,
+    images: ['https://images.unsplash.com/photo-1619531040576-f9416740661f?auto=format&fit=crop&q=80&w=800'],
+    averageRating: 4.7,
+    discountPrice: 9.2,
+  },
+];
+
+const users = [
+  {
+    name: 'Admin User',
+    email: 'admin@cozybakery.com',
+    password: 'admin1',
+    role: 'admin',
+  },
+  {
+    name: 'Manager User',
+    email: 'manager@cozybakery.com',
+    password: 'manager123',
+    role: 'manager',
+  },
+  {
+    name: 'Customer User',
+    email: 'customer@cozybakery.com',
+    password: 'customer123',
+    role: 'customer',
+  },
 ];
 
 // Import into DB
 const importData = async () => {
   try {
+    await connectDB();
+
+    await Product.deleteMany();
+    await User.deleteMany();
+
+    await User.create(users);
     await Product.create(products);
     console.log('Data Imported...');
+    await mongoose.connection.close();
     process.exit();
   } catch (err) {
     console.error(err);
+    await mongoose.connection.close();
+    process.exit(1);
   }
 };
 
 // Delete data
 const deleteData = async () => {
   try {
+    await connectDB();
+
     await Product.deleteMany();
     await User.deleteMany();
     console.log('Data Destroyed...');
+    await mongoose.connection.close();
     process.exit();
   } catch (err) {
     console.error(err);
+    await mongoose.connection.close();
+    process.exit(1);
   }
 };
 
