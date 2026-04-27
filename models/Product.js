@@ -51,6 +51,10 @@ const productSchema = new mongoose.Schema({
   healthBenefits: {
     type: [String],
     default: []
+  },
+  isFeatured: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true,

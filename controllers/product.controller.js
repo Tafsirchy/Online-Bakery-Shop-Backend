@@ -29,6 +29,10 @@ exports.getProducts = async (req, res) => {
       const key = String(rawKey || '');
       const value = rawValue;
       const bracketMatch = key.match(bracketOperatorRegex);
+      
+      let finalValue = value;
+      if (value === 'true') finalValue = true;
+      if (value === 'false') finalValue = false;
 
       if (bracketMatch) {
         const field = bracketMatch[1];
@@ -39,20 +43,20 @@ exports.getProducts = async (req, res) => {
         }
 
         if (op === 'in') {
-          mongoFilters[field][`$${op}`] = String(value)
+          mongoFilters[field][`$${op}`] = String(finalValue)
             .split(',')
             .map((v) => v.trim())
             .filter(Boolean);
         } else {
-          const maybeNumber = Number(value);
-          mongoFilters[field][`$${op}`] = Number.isNaN(maybeNumber) ? value : maybeNumber;
+          const maybeNumber = Number(finalValue);
+          mongoFilters[field][`$${op}`] = Number.isNaN(maybeNumber) ? finalValue : maybeNumber;
         }
 
         continue;
       }
 
-      const maybeNumber = Number(value);
-      mongoFilters[key] = Number.isNaN(maybeNumber) ? value : maybeNumber;
+      const maybeNumber = Number(finalValue);
+      mongoFilters[key] = Number.isNaN(maybeNumber) ? finalValue : maybeNumber;
     }
 
     // Finding resource

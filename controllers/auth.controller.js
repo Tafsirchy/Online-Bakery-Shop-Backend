@@ -202,8 +202,17 @@ exports.googleLogin = async (req, res) => {
 
     sendTokenResponse(user, 200, res);
   } catch (err) {
-    console.error('Google Login Error:', err);
-    return res.status(401).json({ success: false, message: 'Google authentication failed' });
+    console.error('Google Login Error Details:', err);
+    
+    let errorDetail = err.message;
+    if (err.response && err.response.data) {
+      errorDetail = JSON.stringify(err.response.data);
+    }
+
+    return res.status(500).json({ 
+      success: false, 
+      message: `Google Login Error: ${errorDetail}`
+    });
   }
 };
 
