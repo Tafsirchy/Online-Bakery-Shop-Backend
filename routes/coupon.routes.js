@@ -14,9 +14,9 @@ router.post('/validate', protect, validateCoupon);
 
 router.route('/')
   .get(protect, authorize('admin', 'manager'), getCoupons)
-  .post(protect, authorize('admin'), createCoupon);
+  .post(protect, authorize('admin', 'manager'), createCoupon);
 
 router.route('/:id')
-  .delete(protect, authorize('admin'), deleteCoupon);
+  .delete(protect, authorize('admin', 'manager'), deleteCoupon);
 
 module.exports = router;

@@ -16,19 +16,19 @@ const { protect, authorize } = require('../middleware/auth.middleware');
 const router = express.Router();
 
 router.route('/')
-  .get(protect, authorize('admin', 'manager'), getOrders)
   .post(protect, createOrder);
 
 router.post('/checkout-session', protect, createCheckoutSession);
 
 router.get('/myorders', protect, getMyOrders);
-
-router.route('/:id')
-  .get(protect, getOrderById)
-  .delete(protect, authorize('admin', 'manager'), deleteOrder);
-
+router.get('/stats', protect, authorize('admin', 'manager'), getDashboardStats);
+router.get('/:id', protect, getOrderById);
 router.put('/:id/status', protect, authorize('admin', 'manager'), updateOrderStatus);
-router.put('/:id/cancel', protect, cancelMyOrder);
 router.put('/:id/mark-paid', protect, markOrderPaid);
+router.put('/:id/cancel', protect, cancelMyOrder);
+router.delete('/:id', protect, authorize('admin', 'manager'), deleteOrder);
+
+// Admin and Manager access
+router.get('/', protect, authorize('admin', 'manager'), getOrders);
 
 module.exports = router;

@@ -29,6 +29,6 @@ router.patch('/:id/offer', protect, authorize('admin', 'manager'), applyProductO
 router.route('/:id')
   .get(getProduct)
   .put(protect, authorize('admin', 'manager'), updateProduct)
-  .delete(protect, authorize('admin'), deleteProduct);
+  .delete(protect, authorize('admin', 'manager'), deleteProduct);
 
 module.exports = router;

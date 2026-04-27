@@ -582,3 +582,35 @@ exports.deleteOrder = async (req, res) => {
     res.status(400).json({ success: false, message: err.message });
   }
 };
+
+// @desc    Get dashboard stats
+// @route   GET /api/orders/stats
+// @access  Private (Admin/Manager)
+exports.getDashboardStats = async (req, res) => {
+  try {
+    await connectDB();
+    
+    // Total Revenue & Orders (exclude cancelled)
+    const orders = await Order.find({ status: { $ne: 'Cancelled' } });
+    const totalRevenue = orders.reduce((acc, order) => acc + order.totalPrice, 0);
+    const totalOrders = orders.length;
+
+    // Total Users (customers only)
+    const totalUsers = await User.countDocuments({ role: 'customer' });
+
+    // Avg Order Value
+    const avgOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders).toFixed(2) : 0;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalRevenue: Math.round(totalRevenue),
+        totalOrders,
+        totalUsers,
+        avgOrderValue: Number(avgOrderValue)
+      }
+    });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
