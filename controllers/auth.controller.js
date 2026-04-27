@@ -156,9 +156,13 @@ exports.googleLogin = async (req, res) => {
     let userData;
 
     if (code) {
-      // Ensure redirect_uri matches exactly with frontend (no trailing slashes in origin)
+      // Use redirectUri from frontend if provided, otherwise fallback to auto-detection
       const origin = (process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/+$/, '');
-      const redirectUri = `${origin}/login`;
+      const referer = req.headers.referer || '';
+      const isRegister = referer.includes('/register');
+      const defaultRedirectUri = isRegister ? `${origin}/register` : `${origin}/login`;
+      
+      const redirectUri = req.body.redirectUri || defaultRedirectUri;
 
       const client = new OAuth2Client(
         process.env.GOOGLE_CLIENT_ID,
