@@ -27,6 +27,10 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Explicitly handle preflight requests
+app.options('*', cors());
+
 app.use(morgan('dev'));
 
 const { handleStripeWebhook } = require('./controllers/order.controller');
