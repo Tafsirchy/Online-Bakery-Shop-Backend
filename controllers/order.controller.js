@@ -563,3 +563,22 @@ exports.cancelMyOrder = async (req, res) => {
     res.status(400).json({ success: false, message: err.message });
   }
 };
+// @desc    Delete order
+// @route   DELETE /api/orders/:id
+// @access  Private (Admin)
+exports.deleteOrder = async (req, res) => {
+  try {
+    await connectDB();
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    await order.deleteOne();
+
+    res.status(200).json({ success: true, data: {} });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};

@@ -1,8 +1,21 @@
 const express = require('express');
-const { register, login, getMe, forgotPassword, resetPassword, googleLogin, updateDetails, updatePassword, getWishlist, toggleWishlist } = require('../controllers/auth.controller');
+const { 
+  register, 
+  login, 
+  getMe, 
+  forgotPassword, 
+  resetPassword, 
+  googleLogin, 
+  updateDetails, 
+  updatePassword, 
+  getWishlist, 
+  toggleWishlist,
+  getUsers,
+  updateUserRole,
+  deleteUser
+} = require('../controllers/auth.controller');
 
-
-const { protect } = require('../middleware/auth.middleware');
+const { protect, authorize } = require('../middleware/auth.middleware');
 
 const router = express.Router();
 
@@ -17,6 +30,9 @@ router.put('/updatepassword', protect, updatePassword);
 router.get('/wishlist', protect, getWishlist);
 router.post('/wishlist/:productId', protect, toggleWishlist);
 
-
+// Admin only routes
+router.get('/users', protect, authorize('admin'), getUsers);
+router.put('/users/:id/role', protect, authorize('admin'), updateUserRole);
+router.delete('/users/:id', protect, authorize('admin'), deleteUser);
 
 module.exports = router;

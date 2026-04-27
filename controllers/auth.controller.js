@@ -423,3 +423,55 @@ exports.toggleWishlist = async (req, res) => {
     res.status(400).json({ success: false, message: err.message });
   }
 };
+// @desc    Get all users
+// @route   GET /api/auth/users
+// @access  Private (Admin)
+exports.getUsers = async (req, res) => {
+  try {
+    await connectDB();
+    const users = await User.find().sort('-createdAt');
+    res.status(200).json({ success: true, count: users.length, data: users });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+// @desc    Update user role
+// @route   PUT /api/auth/users/:id/role
+// @access  Private (Admin)
+exports.updateUserRole = async (req, res) => {
+  try {
+    await connectDB();
+    const user = await User.findByIdAndUpdate(req.params.id, { role: req.body.role }, {
+      new: true,
+      runValidators: true
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.status(200).json({ success: true, data: user });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+// @desc    Delete user
+// @route   DELETE /api/auth/users/:id
+// @access  Private (Admin)
+exports.deleteUser = async (req, res) => {
+  try {
+    await connectDB();
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    await user.deleteOne();
+    res.status(200).json({ success: true, data: {} });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
