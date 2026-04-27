@@ -30,9 +30,9 @@ router.put('/updatepassword', protect, updatePassword);
 router.get('/wishlist', protect, getWishlist);
 router.post('/wishlist/:productId', protect, toggleWishlist);
 
-// Admin only routes
-router.get('/users', protect, authorize('admin'), getUsers);
-router.put('/users/:id/role', protect, authorize('admin'), updateUserRole);
-router.delete('/users/:id', protect, authorize('admin'), deleteUser);
+// Admin and Manager routes
+router.get('/users', protect, authorize('admin', 'manager'), getUsers);
+router.put('/users/:id/role', protect, authorize('admin', 'manager'), updateUserRole);
+router.delete('/users/:id', protect, authorize('admin', 'manager'), deleteUser);
 
 module.exports = router;
