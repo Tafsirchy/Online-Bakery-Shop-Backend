@@ -44,6 +44,9 @@ exports.addReview = async (req, res) => {
 
     res.status(201).json({ success: true, data: review });
   } catch (err) {
+    if (err.code === 11000) {
+      return res.status(400).json({ success: false, message: 'You have already reviewed this product' });
+    }
     res.status(400).json({ success: false, message: err.message });
   }
 };
