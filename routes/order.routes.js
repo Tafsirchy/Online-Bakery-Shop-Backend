@@ -8,7 +8,8 @@ const {
   updateOrderStatus,
   markOrderPaid,
   cancelMyOrder,
-  deleteOrder
+  deleteOrder,
+  getDashboardStats
 } = require('../controllers/order.controller');
 
 const { protect, authorize } = require('../middleware/auth.middleware');
