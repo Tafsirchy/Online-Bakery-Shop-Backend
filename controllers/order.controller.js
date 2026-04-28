@@ -3,6 +3,7 @@ const Product = require('../models/Product');
 const Coupon = require('../models/Coupon');
 const User = require('../models/User');
 const sendEmail = require('../services/mail.service');
+const { orderConfirmationTemplate, orderStatusUpdateTemplate } = require('../utils/emailTemplates');
 const mongoose = require('mongoose');
 const connectDB = require('../config/db');
 
@@ -10,18 +11,11 @@ const sendOrderConfirmation = async (user, order) => {
   try {
     await sendEmail({
       email: user.email,
-      subject: 'Order Confirmation - The Cozy Bakery',
-      html: `
-        <h1>Thank you for your order, ${user.name}!</h1>
-        <p>Your order <strong>${order.trackingId}</strong> has been received and is being prepared.</p>
-        <p>Total Amount: <strong>৳${Number(order.finalPrice).toFixed(2)}</strong></p>
-        <p>Payment Method: ${order.paymentMethod}</p>
-        <hr />
-        <p>We'll notify you once your treats are on the way!</p>
-      `
+      subject: '✅ Order Confirmed - The Cozy Bakery',
+      html: orderConfirmationTemplate(user, order)
     });
   } catch (err) {
-    console.error('Email could not be sent', err);
+    console.error('Order confirmation email could not be sent', err);
   }
 };
 
@@ -447,6 +441,18 @@ exports.updateOrderStatus = async (req, res) => {
     order.paymentStatus = req.body.paymentStatus || order.paymentStatus;
 
     const updatedOrder = await order.save();
+
+    // Send order status update email
+    if (req.body.status && req.body.status !== order.status) {
+      const user = await User.findById(order.userId);
+      if (user) {
+        sendEmail({
+          email: user.email,
+          subject: `Order Update: ${req.body.status} - The Cozy Bakery`,
+          html: orderStatusUpdateTemplate(user, { ...updatedOrder.toObject(), status: req.body.status })
+        }).catch(err => console.error('Status update email failed:', err));
+      }
+    }
 
     res.status(200).json({ success: true, data: updatedOrder });
   } catch (err) {

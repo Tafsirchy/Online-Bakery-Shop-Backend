@@ -2,7 +2,8 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const connectDB = require('../config/db');
 const axios = require('axios');
-
+const sendEmail = require('../services/mail.service');
+const { welcomeEmailTemplate, passwordResetTemplate } = require('../utils/emailTemplates');
 
 const normalizeEmail = (value = '') => value.trim().toLowerCase();
 const hasJwtSecret = () => Boolean(process.env.JWT_SECRET && process.env.JWT_SECRET.trim());
@@ -85,6 +86,13 @@ exports.register = async (req, res) => {
       email: normalizedEmail,
       password
     });
+
+    // Send Welcome Email asynchronously
+    sendEmail({
+      email: user.email,
+      subject: 'Welcome to The Cozy Bakery! 🥐',
+      html: welcomeEmailTemplate(user.name)
+    }).catch(err => console.error('Welcome email failed:', err));
 
     sendTokenResponse(user, 201, res);
   } catch (err) {
@@ -200,6 +208,13 @@ exports.googleLogin = async (req, res) => {
         password: crypto.randomBytes(16).toString('hex'),
         role: 'customer'
       });
+
+      // Send Welcome Email asynchronously for new Google auth users
+      sendEmail({
+        email: user.email,
+        subject: 'Welcome to The Cozy Bakery! 🥐',
+        html: welcomeEmailTemplate(user.name)
+      }).catch(err => console.error('Welcome email failed:', err));
     }
 
     sendTokenResponse(user, 200, res);
@@ -221,8 +236,6 @@ exports.googleLogin = async (req, res) => {
 
 const crypto = require('crypto');
 
-const sendEmail = require('../utils/sendEmail');
-
 // @desc    Forgot password
 // @route   POST /api/auth/forgotpassword
 // @access  Public
@@ -243,13 +256,11 @@ exports.forgotPassword = async (req, res) => {
     // Create reset url
     const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
 
-    const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please make a put request to: \n\n ${resetUrl}`;
-
     try {
       await sendEmail({
         email: user.email,
-        subject: 'Password reset token',
-        message
+        subject: 'Password Reset Request - The Cozy Bakery',
+        html: passwordResetTemplate(resetUrl)
       });
 
       res.status(200).json({ success: true, data: 'Email sent' });
