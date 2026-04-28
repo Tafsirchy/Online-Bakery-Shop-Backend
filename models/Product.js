@@ -20,10 +20,17 @@ const productSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  isGlobalOffer: {
+    type: Boolean,
+    default: false
+  },
+  previousDiscountPrice: {
+    type: Number,
+    default: 0
+  },
   category: {
     type: String,
-    required: [true, 'Please add a category'],
-    enum: ['Cakes', 'Pastries', 'Cookies', 'Bread', 'Offers']
+    required: [true, 'Please add a category']
   },
   images: {
     type: [String],

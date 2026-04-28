@@ -130,6 +130,12 @@ exports.getProducts = async (req, res) => {
 exports.getProduct = async (req, res) => {
   try {
     await connectDB();
+    
+    // Validate MongoDB ObjectId format
+    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ success: false, message: 'Invalid product ID format' });
+    }
+    
     const product = await Product.findById(req.params.id).populate('reviews');
 
     if (!product) {
@@ -138,7 +144,8 @@ exports.getProduct = async (req, res) => {
 
     res.status(200).json({ success: true, data: product });
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    console.error('Get Product Error:', err);
+    res.status(400).json({ success: false, message: err.message || 'Failed to fetch product' });
   }
 };
 
@@ -198,63 +205,6 @@ exports.deleteProduct = async (req, res) => {
   }
 };
 
-// @desc    Apply or clear offer for all products (optionally by category)
-// @route   PATCH /api/products/offers/global
-// @access  Private (Admin/Manager)
-exports.applyGlobalOffer = async (req, res) => {
-  try {
-    await connectDB();
-    const { discountPercent, clear, category } = req.body;
-    const filter = {};
-
-    if (category && category !== 'all') {
-      filter.category = category;
-    }
-
-    const products = await Product.find(filter);
-
-    if (products.length === 0) {
-      return res.status(404).json({ success: false, message: 'No products found for the selected filter' });
-    }
-
-    let updatedCount = 0;
-
-    if (clear) {
-      for (const product of products) {
-        product.discountPrice = 0;
-        await product.save();
-        updatedCount += 1;
-      }
-
-      return res.status(200).json({
-        success: true,
-        message: 'Offer removed successfully for selected products',
-        updatedCount,
-      });
-    }
-
-    const safePercent = Number(discountPercent);
-    if (!Number.isFinite(safePercent) || safePercent <= 0 || safePercent >= 100) {
-      return res.status(400).json({ success: false, message: 'discountPercent must be between 0 and 100' });
-    }
-
-    for (const product of products) {
-      const discounted = roundPrice(product.price - (product.price * safePercent) / 100);
-      product.discountPrice = discounted > 0 ? discounted : 0;
-      await product.save();
-      updatedCount += 1;
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Global offer applied successfully',
-      updatedCount,
-    });
-  } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
-  }
-};
-
 // @desc    Apply or clear offer for a specific product
 // @route   PATCH /api/products/:id/offer
 // @access  Private (Admin/Manager)
@@ -270,6 +220,7 @@ exports.applyProductOffer = async (req, res) => {
 
     if (clear) {
       product.discountPrice = 0;
+      product.isGlobalOffer = false;
       await product.save();
       return res.status(200).json({ success: true, data: product, message: 'Product offer removed' });
     }
@@ -281,9 +232,78 @@ exports.applyProductOffer = async (req, res) => {
 
     const discounted = roundPrice(product.price - (product.price * safePercent) / 100);
     product.discountPrice = discounted > 0 ? discounted : 0;
+    // mark individual product offers as manual (not global)
+    product.isGlobalOffer = false;
     await product.save();
 
     res.status(200).json({ success: true, data: product, message: 'Product offer applied successfully' });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+// @desc    Apply or clear global offer for a category
+// @route   PATCH /api/products/offers/global
+// @access  Private (Admin/Manager)
+exports.applyGlobalOffer = async (req, res) => {
+  try {
+    await connectDB();
+    const { discountPercent, category, clear } = req.body;
+
+    if (!category) {
+      return res.status(400).json({ success: false, message: 'Category is required' });
+    }
+
+    let query = { category };
+
+    if (clear) {
+      const products = await Product.find(query);
+      const updates = [];
+      for (const product of products) {
+        if (product.isGlobalOffer) {
+          // Restore previous individual discount if it existed
+          product.discountPrice = product.previousDiscountPrice || 0;
+          product.previousDiscountPrice = 0;
+          product.isGlobalOffer = false;
+          updates.push(product.save());
+        }
+      }
+      await Promise.all(updates);
+      return res.status(200).json({ 
+        success: true, 
+        message: `Global offer cleared for ${category}. Previous offers restored.`, 
+        modifiedCount: updates.length 
+      });
+    }
+
+    const safePercent = Number(discountPercent);
+    if (!Number.isFinite(safePercent) || safePercent <= 0 || safePercent >= 100) {
+      return res.status(400).json({ success: false, message: 'discountPercent must be between 0 and 100' });
+    }
+
+    const products = await Product.find(query);
+    const updates = [];
+
+    for (const product of products) {
+      // Store current discountPrice as previous only if not already a global offer
+      if (!product.isGlobalOffer) {
+        product.previousDiscountPrice = product.discountPrice || 0;
+      }
+      
+      const discounted = roundPrice(product.price - (product.price * safePercent) / 100);
+      product.discountPrice = discounted > 0 ? discounted : 0;
+      // mark these as global offers so the UI can differentiate
+      product.isGlobalOffer = true;
+      updates.push(product.save());
+    }
+
+    await Promise.all(updates);
+
+    res.status(200).json({ 
+      success: true, 
+      message: `Global offer of ${safePercent}% applied to ${products.length} ${category} products`,
+      count: products.length
+    });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }

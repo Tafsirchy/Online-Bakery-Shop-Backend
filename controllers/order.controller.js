@@ -1,6 +1,7 @@
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const Coupon = require('../models/Coupon');
+const User = require('../models/User');
 const sendEmail = require('../services/mail.service');
 const mongoose = require('mongoose');
 const connectDB = require('../config/db');
@@ -116,11 +117,11 @@ const normalizeOrderProducts = async (rawProducts = []) => {
 
   if (orderProducts.length === 0) {
     const unavailable = [...missingProducts, ...outOfStockProducts].filter(Boolean);
-    throw new Error(
-      unavailable.length > 0
-        ? `Some products are unavailable: ${unavailable.join(', ')}`
-        : 'No valid products available for checkout'
-    );
+    const errorMsg = unavailable.length > 0
+      ? `Some products are unavailable: ${unavailable.join(', ')}`
+      : 'No valid products available for checkout';
+    console.log('Order Normalization Failed:', errorMsg, { missingProducts, outOfStockProducts });
+    throw new Error(errorMsg);
   }
 
   const unavailable = [...missingProducts, ...outOfStockProducts].filter(Boolean);
@@ -245,7 +246,11 @@ exports.createOrder = async (req, res) => {
     let safeDiscount = 0;
 
     if (couponCode) {
-      const coupon = await Coupon.findOne({ code: String(couponCode).toUpperCase(), isActive: true });
+      const coupon = await Coupon.findOne({ 
+        code: { $regex: new RegExp(`^${String(couponCode).trim()}$`, 'i') }, 
+        isActive: true,
+        expiryDate: { $gt: new Date() }
+      });
       if (coupon && subtotal >= (coupon.minPurchase || 0)) {
         safeDiscount = (subtotal * coupon.discount) / 100;
       }
@@ -280,6 +285,7 @@ exports.createOrder = async (req, res) => {
       warnings: missingProducts,
     });
   } catch (err) {
+    console.error('Order Creation Error:', err.message);
     res.status(400).json({ success: false, message: err.message });
   }
 };
@@ -307,7 +313,11 @@ exports.createCheckoutSession = async (req, res) => {
     let safeDiscount = 0;
 
     if (couponCode) {
-      const coupon = await Coupon.findOne({ code: String(couponCode).toUpperCase(), isActive: true });
+      const coupon = await Coupon.findOne({ 
+        code: { $regex: new RegExp(`^${String(couponCode).trim()}$`, 'i') }, 
+        isActive: true,
+        expiryDate: { $gt: new Date() }
+      });
       if (coupon && subtotal >= (coupon.minPurchase || 0)) {
         safeDiscount = (subtotal * coupon.discount) / 100;
       }
@@ -592,11 +602,11 @@ exports.getDashboardStats = async (req, res) => {
     
     // Total Revenue & Orders (exclude cancelled)
     const orders = await Order.find({ status: { $ne: 'Cancelled' } });
-    const totalRevenue = orders.reduce((acc, order) => acc + order.totalPrice, 0);
+    const totalRevenue = orders.reduce((acc, order) => acc + (order.finalPrice || 0), 0);
     const totalOrders = orders.length;
 
-    // Total Users (customers only)
-    const totalUsers = await User.countDocuments({ role: 'customer' });
+    // Total Users (all roles)
+    const totalUsers = await User.countDocuments();
 
     // Avg Order Value
     const avgOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders).toFixed(2) : 0;

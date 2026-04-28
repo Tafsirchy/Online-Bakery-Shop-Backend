@@ -19,6 +19,8 @@ const authRoutes = require('./routes/auth.routes');
 const productRoutes = require('./routes/product.routes');
 const couponRoutes = require('./routes/coupon.routes');
 const orderRoutes = require('./routes/order.routes');
+const settingsRoutes = require('./routes/settings.routes');
+const categoryRoutes = require('./routes/category.routes');
 
 // Middleware
 app.use(cors({
@@ -42,6 +44,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/categories', categoryRoutes);
 
 // Basic Route
 app.get('/', (req, res) => {

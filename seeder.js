@@ -8,6 +8,8 @@ dotenv.config();
 // Load models
 const Product = require('./models/Product');
 const User = require('./models/User');
+const Coupon = require('./models/Coupon');
+const Category = require('./models/Category');
 
 // Mock Data
 const products = [
@@ -130,12 +132,12 @@ const products = [
   {
     name: 'Weekend Special Focaccia',
     price: 11.5,
-    category: 'Offers',
+    category: 'Bread',
     description: 'Rosemary-garlic focaccia baked fresh for limited weekend batches.',
     stock: 14,
     images: ['https://images.unsplash.com/photo-1619531040576-f9416740661f?auto=format&fit=crop&q=80&w=800'],
     averageRating: 4.7,
-    discountPrice: 9.2,
+    discountPrice: 0,
   },
 ];
 
@@ -160,6 +162,52 @@ const users = [
   },
 ];
 
+const coupons = [
+  {
+    code: 'BAKERY10',
+    discount: 10,
+    expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+    isActive: true,
+    minPurchase: 100,
+    description: 'Get 10% off on orders above ৳100'
+  },
+  {
+    code: 'WELCOME20',
+    discount: 20,
+    expiryDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days from now
+    isActive: true,
+    minPurchase: 500,
+    description: 'Special welcome discount for new customers!'
+  }
+];
+
+const initialCategories = [
+  { 
+    name: 'Cakes', 
+    description: 'From celebration masterpieces to daily tea-time delights, our cakes are baked with the finest organic cocoa and Madagascan vanilla.', 
+    subtitle: 'Divine layers of sweetness for every celebration.', 
+    isFeatured: true 
+  },
+  { 
+    name: 'Pastries', 
+    description: 'Hundreds of flaky layers, pure French butter, and the crunch of a perfect bake. Our pastries are a morning tradition.', 
+    subtitle: 'Flaky, buttery goodness baked fresh every morning.', 
+    isFeatured: true 
+  },
+  { 
+    name: 'Cookies', 
+    description: 'Crispy edges, gooey centers, and a hint of sea salt. Made in small batches to ensure the perfect texture every time.', 
+    subtitle: 'Crispy edges and soft hearts in every bite.', 
+    isFeatured: true 
+  },
+  { 
+    name: 'Bread', 
+    description: 'The soul of our bakery. Naturally leavened sourdoughs and rustic loaves with a thick, caramelized crust.', 
+    subtitle: 'The soul of our bakery, slow-fermented for flavor.', 
+    isFeatured: true 
+  }
+];
+
 // Import into DB
 const importData = async () => {
   try {
@@ -167,9 +215,13 @@ const importData = async () => {
 
     await Product.deleteMany();
     await User.deleteMany();
+    await Coupon.deleteMany();
+    await Category.deleteMany();
 
     await User.create(users);
     await Product.create(products);
+    await Coupon.create(coupons);
+    await Category.create(initialCategories);
     console.log('Data Imported...');
     await mongoose.connection.close();
     process.exit();
@@ -187,6 +239,8 @@ const deleteData = async () => {
 
     await Product.deleteMany();
     await User.deleteMany();
+    await Coupon.deleteMany();
+    await Category.deleteMany();
     console.log('Data Destroyed...');
     await mongoose.connection.close();
     process.exit();

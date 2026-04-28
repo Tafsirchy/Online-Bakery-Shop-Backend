@@ -5,8 +5,8 @@ const {
   createProduct,
   updateProduct,
   deleteProduct,
-  applyGlobalOffer,
-  applyProductOffer
+  applyProductOffer,
+  applyGlobalOffer
 } = require('../controllers/product.controller');
 
 const { protect, authorize } = require('../middleware/auth.middleware');
@@ -24,6 +24,7 @@ router.route('/')
   .post(protect, authorize('admin', 'manager'), createProduct);
 
 router.patch('/offers/global', protect, authorize('admin', 'manager'), applyGlobalOffer);
+
 router.patch('/:id/offer', protect, authorize('admin', 'manager'), applyProductOffer);
 
 router.route('/:id')
