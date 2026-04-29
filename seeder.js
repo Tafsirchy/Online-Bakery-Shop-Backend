@@ -210,6 +210,10 @@ const initialCategories = [
 
 // Import into DB
 const importData = async () => {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('❌ CRITICAL: Cannot run seeder in production environment! Aborting to prevent data loss.');
+    process.exit(1);
+  }
   try {
     await connectDB();
 
@@ -234,6 +238,10 @@ const importData = async () => {
 
 // Delete data
 const deleteData = async () => {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('❌ CRITICAL: Cannot destroy data in production environment! Aborting.');
+    process.exit(1);
+  }
   try {
     await connectDB();
 
