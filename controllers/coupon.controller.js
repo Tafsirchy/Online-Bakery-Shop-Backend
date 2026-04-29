@@ -1,9 +1,7 @@
 const Coupon = require('../models/Coupon');
 const GlobalSettings = require('../models/GlobalSettings');
 
-// @desc    Get all coupons
-// @route   GET /api/coupons
-// @access  Private (Admin/Manager)
+// Get all coupons
 exports.getCoupons = async (req, res) => {
   try {
     const coupons = await Coupon.find();
@@ -13,9 +11,7 @@ exports.getCoupons = async (req, res) => {
   }
 };
 
-// @desc    Get active coupons for public UI
-// @route   GET /api/coupons/public
-// @access  Public
+// Get active coupons
 exports.getPublicCoupons = async (req, res) => {
   try {
     const coupons = await Coupon.find({
@@ -29,9 +25,7 @@ exports.getPublicCoupons = async (req, res) => {
   }
 };
 
-// @desc    Create coupon
-// @route   POST /api/coupons
-// @access  Private (Admin)
+// Create coupon
 exports.createCoupon = async (req, res) => {
   try {
     const coupon = await Coupon.create(req.body);
@@ -41,9 +35,7 @@ exports.createCoupon = async (req, res) => {
   }
 };
 
-// @desc    Validate coupon
-// @route   POST /api/coupons/validate
-// @access  Private
+// Validate coupon
 exports.validateCoupon = async (req, res) => {
   try {
     const { code, totalAmount } = req.body;
@@ -109,9 +101,7 @@ exports.validateCoupon = async (req, res) => {
   }
 };
 
-// @desc    Update coupon
-// @route   PUT /api/coupons/:id
-// @access  Private (Admin)
+// Update coupon
 exports.updateCoupon = async (req, res) => {
   try {
     let coupon = await Coupon.findById(req.params.id);
@@ -131,9 +121,7 @@ exports.updateCoupon = async (req, res) => {
   }
 };
 
-// @desc    Delete coupon
-// @route   DELETE /api/coupons/:id
-// @access  Private (Admin)
+// Delete coupon
 exports.deleteCoupon = async (req, res) => {
   try {
     const coupon = await Coupon.findById(req.params.id);

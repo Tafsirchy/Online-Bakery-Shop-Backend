@@ -222,9 +222,7 @@ exports.handleStripeWebhook = async (req, res) => {
   return res.status(200).json({ received: true });
 };
 
-// @desc    Create new order
-// @route   POST /api/orders
-// @access  Private
+// Create new order
 exports.createOrder = async (req, res) => {
   try {
     await connectDB();
@@ -284,9 +282,7 @@ exports.createOrder = async (req, res) => {
   }
 };
 
-// @desc    Create Stripe checkout session and pending order
-// @route   POST /api/orders/checkout-session
-// @access  Private
+// Create Stripe checkout session
 exports.createCheckoutSession = async (req, res) => {
   try {
     await connectDB();
@@ -376,9 +372,7 @@ exports.createCheckoutSession = async (req, res) => {
   }
 };
 
-// @desc    Get order by ID
-// @route   GET /api/orders/:id
-// @access  Private
+// Get order by ID
 exports.getOrderById = async (req, res) => {
   try {
     await connectDB();
@@ -399,9 +393,7 @@ exports.getOrderById = async (req, res) => {
   }
 };
 
-// @desc    Get logged in user orders
-// @route   GET /api/orders/myorders
-// @access  Private
+// Get logged in user orders
 exports.getMyOrders = async (req, res) => {
   try {
     await connectDB();
@@ -412,9 +404,7 @@ exports.getMyOrders = async (req, res) => {
   }
 };
 
-// @desc    Get all orders
-// @route   GET /api/orders
-// @access  Private (Admin/Manager)
+// Get all orders
 exports.getOrders = async (req, res) => {
   try {
     await connectDB();
@@ -425,9 +415,7 @@ exports.getOrders = async (req, res) => {
   }
 };
 
-// @desc    Update order status
-// @route   PUT /api/orders/:id/status
-// @access  Private (Admin/Manager)
+// Update order status
 exports.updateOrderStatus = async (req, res) => {
   try {
     await connectDB();
@@ -460,9 +448,7 @@ exports.updateOrderStatus = async (req, res) => {
   }
 };
 
-// @desc    Mark Stripe order as paid
-// @route   PUT /api/orders/:id/mark-paid
-// @access  Private
+// Mark Stripe order as paid
 exports.markOrderPaid = async (req, res) => {
   try {
     await connectDB();
@@ -539,9 +525,7 @@ exports.markOrderPaid = async (req, res) => {
   }
 };
 
-// @desc    Cancel an order (by customer)
-// @route   PUT /api/orders/:id/cancel
-// @access  Private
+// Cancel an order
 exports.cancelMyOrder = async (req, res) => {
   try {
     await connectDB();
@@ -579,9 +563,7 @@ exports.cancelMyOrder = async (req, res) => {
     res.status(400).json({ success: false, message: err.message });
   }
 };
-// @desc    Delete order
-// @route   DELETE /api/orders/:id
-// @access  Private (Admin)
+// Delete order
 exports.deleteOrder = async (req, res) => {
   try {
     await connectDB();
@@ -599,9 +581,7 @@ exports.deleteOrder = async (req, res) => {
   }
 };
 
-// @desc    Get dashboard stats
-// @route   GET /api/orders/stats
-// @access  Private (Admin/Manager)
+// Get dashboard stats
 exports.getDashboardStats = async (req, res) => {
   try {
     await connectDB();

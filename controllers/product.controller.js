@@ -3,9 +3,7 @@ const connectDB = require('../config/db');
 
 const roundPrice = (value) => Number(Number(value).toFixed(2));
 
-// @desc    Get all products
-// @route   GET /api/products
-// @access  Public
+// Get all products
 exports.getProducts = async (req, res) => {
   try {
     await connectDB();
@@ -124,9 +122,7 @@ exports.getProducts = async (req, res) => {
   }
 };
 
-// @desc    Get single product
-// @route   GET /api/products/:id
-// @access  Public
+// Get single product
 exports.getProduct = async (req, res) => {
   try {
     await connectDB();
@@ -149,9 +145,7 @@ exports.getProduct = async (req, res) => {
   }
 };
 
-// @desc    Create new product
-// @route   POST /api/products
-// @access  Private (Admin/Manager)
+// Create new product
 exports.createProduct = async (req, res) => {
   try {
     await connectDB();
@@ -162,9 +156,7 @@ exports.createProduct = async (req, res) => {
   }
 };
 
-// @desc    Update product
-// @route   PUT /api/products/:id
-// @access  Private (Admin/Manager)
+// Update product
 exports.updateProduct = async (req, res) => {
   try {
     await connectDB();
@@ -185,9 +177,7 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
-// @desc    Delete product
-// @route   DELETE /api/products/:id
-// @access  Private (Admin)
+// Delete product
 exports.deleteProduct = async (req, res) => {
   try {
     await connectDB();
@@ -205,9 +195,7 @@ exports.deleteProduct = async (req, res) => {
   }
 };
 
-// @desc    Apply or clear offer for a specific product
-// @route   PATCH /api/products/:id/offer
-// @access  Private (Admin/Manager)
+// Apply or clear product offer
 exports.applyProductOffer = async (req, res) => {
   try {
     await connectDB();
@@ -242,9 +230,7 @@ exports.applyProductOffer = async (req, res) => {
   }
 };
 
-// @desc    Apply or clear global offer for a category
-// @route   PATCH /api/products/offers/global
-// @access  Private (Admin/Manager)
+// Apply or clear global offer
 exports.applyGlobalOffer = async (req, res) => {
   try {
     await connectDB();

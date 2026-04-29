@@ -1,9 +1,7 @@
 const GlobalSettings = require('../models/GlobalSettings');
 const connectDB = require('../config/db');
 
-// @desc    Get global settings
-// @route   GET /api/settings
-// @access  Public
+// Get global settings
 exports.getSettings = async (req, res) => {
   try {
     await connectDB();
@@ -22,9 +20,7 @@ exports.getSettings = async (req, res) => {
   }
 };
 
-// @desc    Update global settings
-// @route   PUT /api/settings
-// @access  Private (Admin/Manager)
+// Update global settings
 exports.updateSettings = async (req, res) => {
   try {
     await connectDB();

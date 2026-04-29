@@ -1,9 +1,7 @@
 const Review = require('../models/Review');
 const Product = require('../models/Product');
 
-// @desc    Get reviews for a product
-// @route   GET /api/products/:productId/reviews
-// @access  Public
+// Get product reviews
 exports.getReviews = async (req, res) => {
   try {
     const mongoose = require('mongoose');
@@ -26,9 +24,7 @@ exports.getReviews = async (req, res) => {
   }
 };
 
-// @desc    Add review
-// @route   POST /api/products/:productId/reviews
-// @access  Private
+// Add review
 exports.addReview = async (req, res) => {
   try {
     req.body.productId = req.params.productId;
@@ -51,9 +47,7 @@ exports.addReview = async (req, res) => {
   }
 };
 
-// @desc    Update review
-// @route   PUT /api/reviews/:id
-// @access  Private
+// Update review
 exports.updateReview = async (req, res) => {
   try {
     let review = await Review.findById(req.params.id);
@@ -78,9 +72,7 @@ exports.updateReview = async (req, res) => {
   }
 };
 
-// @desc    Delete review
-// @route   DELETE /api/reviews/:id
-// @access  Private
+// Delete review
 exports.deleteReview = async (req, res) => {
   try {
     const review = await Review.findById(req.params.id);

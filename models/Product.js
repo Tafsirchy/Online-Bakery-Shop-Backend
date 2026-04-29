@@ -69,13 +69,13 @@ const productSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// Cascade delete reviews when a product is deleted
+// Cascade delete reviews
 productSchema.pre('deleteOne', { document: true, query: false }, async function(next) {
   await this.model('Review').deleteMany({ productId: this._id });
   next();
 });
 
-// Reverse populate with virtuals
+// Virtual reviews
 productSchema.virtual('reviews', {
   ref: 'Review',
   localField: '_id',

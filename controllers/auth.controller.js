@@ -31,9 +31,9 @@ const sendAuthError = (res, err, fallbackMessage) => {
     return res.status(400).json({ success: false, message });
   }
 
-  // Surface DB connectivity issues clearly instead of generic 400/500 messages.
+  // Surface DB connectivity issues messages.
   if (
-    message.includes('buffering timed out') || 
+    message.includes('buffering timed out') ||
     message.includes('Server selection timed out') ||
     message.includes('ECONNREFUSED') ||
     message.includes('querySrv')
@@ -47,9 +47,7 @@ const sendAuthError = (res, err, fallbackMessage) => {
   return res.status(500).json({ success: false, message: message || fallbackMessage });
 };
 
-// @desc    Register user
-// @route   POST /api/auth/register
-// @access  Public
+//  Register user
 exports.register = async (req, res) => {
   try {
     await connectDB();
@@ -87,7 +85,7 @@ exports.register = async (req, res) => {
       password
     });
 
-    // Send Welcome Email asynchronously
+    // Send Welcome Email
     sendEmail({
       email: user.email,
       subject: 'Welcome to Bakery & Co.! 🥐',
@@ -100,9 +98,7 @@ exports.register = async (req, res) => {
   }
 };
 
-// @desc    Login user
-// @route   POST /api/auth/login
-// @access  Public
+// Login user
 exports.login = async (req, res) => {
   try {
     await connectDB();
@@ -145,8 +141,6 @@ exports.login = async (req, res) => {
 };
 
 // @desc    Get current logged in user
-// @route   GET /api/auth/me
-// @access  Private
 exports.getMe = async (req, res) => {
   await connectDB();
   const user = await User.findById(req.user.id);
@@ -171,7 +165,7 @@ exports.googleLogin = async (req, res) => {
       const referer = req.headers.referer || '';
       const isRegister = referer.includes('/register');
       const defaultRedirectUri = isRegister ? `${origin}/register` : `${origin}/login`;
-      
+
       const redirectUri = req.body.redirectUri || defaultRedirectUri;
 
       const client = new OAuth2Client(
@@ -220,14 +214,14 @@ exports.googleLogin = async (req, res) => {
     sendTokenResponse(user, 200, res);
   } catch (err) {
     console.error('Google Login Error Details:', err);
-    
+
     let errorDetail = err.message;
     if (err.response && err.response.data) {
       errorDetail = JSON.stringify(err.response.data);
     }
 
-    return res.status(500).json({ 
-      success: false, 
+    return res.status(500).json({
+      success: false,
       message: `Google Login Error: ${errorDetail}`
     });
   }
@@ -409,7 +403,7 @@ exports.toggleWishlist = async (req, res) => {
     await connectDB();
     const user = await User.findById(req.user.id);
     const productId = req.params.productId;
-    
+
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
