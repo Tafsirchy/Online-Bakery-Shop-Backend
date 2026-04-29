@@ -90,7 +90,7 @@ exports.register = async (req, res) => {
     // Send Welcome Email asynchronously
     sendEmail({
       email: user.email,
-      subject: 'Welcome to The Cozy Bakery! 🥐',
+      subject: 'Welcome to Bakery & Co.! 🥐',
       html: welcomeEmailTemplate(user.name)
     }).catch(err => console.error('Welcome email failed:', err));
 
@@ -212,7 +212,7 @@ exports.googleLogin = async (req, res) => {
       // Send Welcome Email asynchronously for new Google auth users
       sendEmail({
         email: user.email,
-        subject: 'Welcome to The Cozy Bakery! 🥐',
+        subject: 'Welcome to Bakery & Co.! 🥐',
         html: welcomeEmailTemplate(user.name)
       }).catch(err => console.error('Welcome email failed:', err));
     }
@@ -259,7 +259,7 @@ exports.forgotPassword = async (req, res) => {
     try {
       await sendEmail({
         email: user.email,
-        subject: 'Password Reset Request - The Cozy Bakery',
+        subject: 'Password Reset Request - Bakery & Co.',
         html: passwordResetTemplate(resetUrl)
       });
 

@@ -83,16 +83,16 @@ exports.welcomeEmailTemplate = (name) => `
   <body>
     <div class="container">
       <div class="header">
-        <h1>THE COZY BAKERY</h1>
+        <h1>BAKERY & CO.</h1>
       </div>
       <div class="content">
-        <h2>Welcome to The Cozy Bakery, ${name}! 🥐</h2>
+        <h2>Welcome to Bakery & Co., ${name}! 🥐</h2>
         <p>We are absolutely thrilled to have you join our family of pastry lovers and bread enthusiasts.</p>
-        <p>At The Cozy Bakery, we believe in the magic of freshly baked goods, made with love and the finest ingredients. Your account is now active, and you're ready to start exploring our daily fresh batches.</p>
+        <p>At Bakery & Co., we believe in the magic of freshly baked goods, made with love and the finest ingredients. Your account is now active, and you're ready to start exploring our daily fresh batches.</p>
         <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/products" class="btn">Explore Fresh Bakes</a>
       </div>
       <div class="footer">
-        <p>The Cozy Bakery &copy; ${new Date().getFullYear()}</p>
+        <p>Bakery & Co. &copy; ${new Date().getFullYear()}</p>
         <p>Artisanal Breads & Pastries</p>
       </div>
     </div>
@@ -109,17 +109,17 @@ exports.passwordResetTemplate = (resetUrl) => `
   <body>
     <div class="container">
       <div class="header">
-        <h1>THE COZY BAKERY</h1>
+        <h1>BAKERY & CO.</h1>
       </div>
       <div class="content">
         <h2>Password Reset Request 🔐</h2>
-        <p>We received a request to reset the password for your Cozy Bakery account.</p>
+        <p>We received a request to reset the password for your Bakery & Co. account.</p>
         <p>If you didn't make this request, you can safely ignore this email. Otherwise, click the button below to set a new password:</p>
         <a href="${resetUrl}" class="btn">Reset My Password</a>
         <p style="margin-top: 30px; font-size: 12px; color: #777;">Or copy and paste this link into your browser:<br/>${resetUrl}</p>
       </div>
       <div class="footer">
-        <p>The Cozy Bakery &copy; ${new Date().getFullYear()}</p>
+        <p>Bakery & Co. &copy; ${new Date().getFullYear()}</p>
       </div>
     </div>
   </body>
@@ -135,7 +135,7 @@ exports.orderConfirmationTemplate = (user, order) => `
   <body>
     <div class="container">
       <div class="header">
-        <h1>THE COZY BAKERY</h1>
+        <h1>BAKERY & CO.</h1>
       </div>
       <div class="content">
         <h2>Order Confirmed! 🥖</h2>
@@ -153,7 +153,7 @@ exports.orderConfirmationTemplate = (user, order) => `
         <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/customer?tab=orders" class="btn">Track My Order</a>
       </div>
       <div class="footer">
-        <p>The Cozy Bakery &copy; ${new Date().getFullYear()}</p>
+        <p>Bakery & Co. &copy; ${new Date().getFullYear()}</p>
         <p>If you have any questions, reply to this email.</p>
       </div>
     </div>
@@ -191,7 +191,7 @@ exports.orderStatusUpdateTemplate = (user, order) => {
     <body>
       <div class="container">
         <div class="header">
-          <h1>THE COZY BAKERY</h1>
+          <h1>BAKERY & CO.</h1>
         </div>
         <div class="content">
           <h2>Order Update ${emoji}</h2>
@@ -206,7 +206,7 @@ exports.orderStatusUpdateTemplate = (user, order) => {
           <a href="${clientUrl}/customer?tab=orders" class="btn">View Order Details</a>
         </div>
         <div class="footer">
-          <p>The Cozy Bakery &copy; ${year}</p>
+          <p>Bakery & Co. &copy; ${year}</p>
         </div>
       </div>
     </body>

@@ -11,7 +11,7 @@ const sendEmail = async (options) => {
   });
 
   const message = {
-    from: `${process.env.FROM_NAME || 'The Cozy Bakery'} <${process.env.NODEMAILER_EMAIL}>`,
+    from: `${process.env.FROM_NAME || 'Bakery & Co.'} <${process.env.NODEMAILER_EMAIL}>`,
     to: options.email,
     subject: options.subject,
     text: options.message,

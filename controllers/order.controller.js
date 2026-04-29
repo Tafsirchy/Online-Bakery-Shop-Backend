@@ -11,7 +11,7 @@ const sendOrderConfirmation = async (user, order) => {
   try {
     await sendEmail({
       email: user.email,
-      subject: '✅ Order Confirmed - The Cozy Bakery',
+      subject: '✅ Order Confirmed - Bakery & Co.',
       html: orderConfirmationTemplate(user, order)
     });
   } catch (err) {
@@ -138,7 +138,7 @@ const buildStripeLineItems = ({ orderProducts = [], chargeAmount = 0, shippingFe
     price_data: {
       currency: 'bdt',
       product_data: {
-        name: 'The Cozy Bakery Order',
+        name: 'Bakery & Co. Order',
         description,
       },
       unit_amount: Math.round(Number(chargeAmount || 0) * 100),
@@ -448,7 +448,7 @@ exports.updateOrderStatus = async (req, res) => {
       if (user) {
         sendEmail({
           email: user.email,
-          subject: `Order Update: ${req.body.status} - The Cozy Bakery`,
+          subject: `Order Update: ${req.body.status} - Bakery & Co.`,
           html: orderStatusUpdateTemplate(user, { ...updatedOrder.toObject(), status: req.body.status })
         }).catch(err => console.error('Status update email failed:', err));
       }
