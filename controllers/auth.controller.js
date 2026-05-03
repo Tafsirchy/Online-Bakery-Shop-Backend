@@ -4,18 +4,11 @@ const connectDB = require('../config/db');
 const axios = require('axios');
 const sendEmail = require('../services/mail.service');
 const { welcomeEmailTemplate, passwordResetTemplate } = require('../utils/emailTemplates');
+const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 
 const normalizeEmail = (value = '') => value.trim().toLowerCase();
 const hasJwtSecret = () => Boolean(process.env.JWT_SECRET && process.env.JWT_SECRET.trim());
-const pickRequestPayload = (req) => {
-  if (req.body && Object.keys(req.body).length > 0) {
-    return req.body;
-  }
-  if (req.query && Object.keys(req.query).length > 0) {
-    return req.query;
-  }
-  return {};
-};
 
 const sendAuthError = (res, err, fallbackMessage) => {
   const message = err?.message || fallbackMessage;
@@ -147,8 +140,6 @@ exports.getMe = async (req, res) => {
   res.status(200).json({ success: true, data: user });
 };
 
-const { OAuth2Client } = require('google-auth-library');
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // @desc    Google login
 // @route   POST /api/auth/google
@@ -160,11 +151,15 @@ exports.googleLogin = async (req, res) => {
     let userData;
 
     if (code) {
-      // Use redirectUri from frontend if provided, otherwise fallback to auto-detection
-      const origin = (process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/+$/, '');
+      // Prioritize the actual origin of the request, fallback to env, then localhost
+      const origin = (req.headers.origin || process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/+$/, '');
       const referer = req.headers.referer || '';
-      const isRegister = referer.includes('/register');
-      const defaultRedirectUri = isRegister ? `${origin}/register` : `${origin}/login`;
+      
+      // Explicitly construct the redirect URI to match what the frontend sends
+      let defaultRedirectUri = `${origin}/login`;
+      if (referer.includes('/register')) {
+        defaultRedirectUri = `${origin}/register`;
+      }
 
       const redirectUri = req.body.redirectUri || defaultRedirectUri;
 
@@ -173,12 +168,24 @@ exports.googleLogin = async (req, res) => {
         process.env.GOOGLE_CLIENT_SECRET,
         redirectUri
       );
-      const { tokens } = await client.getToken(code);
+
+      let tokens;
+      try {
+        const response = await client.getToken(code);
+        tokens = response.tokens;
+      } catch (tokenErr) {
+        console.error('Google Token Exchange Error:', tokenErr.message);
+        return res.status(401).json({
+          success: false,
+          message: 'Google authorization code is invalid or has already been used. Please try logging in again.'
+        });
+      }
+
       const response = await axios.get(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${tokens.access_token}`);
       userData = response.data;
     } else if (idToken) {
-      const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-      const ticket = await client.verifyIdToken({
+      const gClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+      const ticket = await gClient.verifyIdToken({
         idToken,
         audience: process.env.GOOGLE_CLIENT_ID,
       });
@@ -228,7 +235,6 @@ exports.googleLogin = async (req, res) => {
 };
 
 
-const crypto = require('crypto');
 
 // @desc    Forgot password
 // @route   POST /api/auth/forgotpassword

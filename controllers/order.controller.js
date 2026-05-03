@@ -6,6 +6,7 @@ const sendEmail = require('../services/mail.service');
 const { orderConfirmationTemplate, orderStatusUpdateTemplate } = require('../utils/emailTemplates');
 const mongoose = require('mongoose');
 const connectDB = require('../config/db');
+const Stripe = require('stripe');
 
 const sendOrderConfirmation = async (user, order) => {
   try {
@@ -24,7 +25,6 @@ const getStripeClient = () => {
     return null;
   }
 
-  const Stripe = require('stripe');
   return new Stripe(process.env.STRIPE_SECRET_KEY);
 };
 
